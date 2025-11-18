@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { medicationAPI } from '../utils/api';
 
 function AddMedication() {
     const { id } = useParams();
@@ -14,6 +15,8 @@ function AddMedication() {
         prescribed: 'yes',
         comments: '',
     });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleChange = (e) => {
         setFormData({
@@ -22,32 +25,25 @@ function AddMedication() {
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setLoading(true);
 
-        // Get existing patients
-        const patients = JSON.parse(localStorage.getItem('patients') || '[]');
+        try {
+            console.log('Adding medication for patient:', id);
 
-        // Find the patient
-        const patientIndex = patients.findIndex(p => p.id === id);
+            await medicationAPI.create(parseInt(id), formData);
 
-        if (patientIndex !== -1) {
-            // Initialize medications array if it doesn't exist
-            if (!patients[patientIndex].medications) {
-                patients[patientIndex].medications = [];
-            }
-
-            // Add new medication
-            patients[patientIndex].medications.push({
-                ...formData,
-                addedAt: new Date().toISOString(),
-            });
-
-            // Save back to localStorage
-            localStorage.setItem('patients', JSON.stringify(patients));
+            console.log('Medication added successfully');
 
             // Navigate back to patient detail
             navigate(`/dashboard/patient/${id}`);
+        } catch (err) {
+            console.error('Create medication error:', err);
+            setError(err.message || 'Failed to add medication. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -64,6 +60,12 @@ function AddMedication() {
             <div className="bg-white rounded-lg shadow-md p-8">
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">Add Medication</h2>
 
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -75,7 +77,8 @@ function AddMedication() {
                             required
                             value={formData.name}
                             onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                            disabled={loading}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                             placeholder="e.g., Aspirin"
                         />
                     </div>
@@ -91,7 +94,8 @@ function AddMedication() {
                                 required
                                 value={formData.strength}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                disabled={loading}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                                 placeholder="e.g., 100mg"
                             />
                         </div>
@@ -105,7 +109,8 @@ function AddMedication() {
                                 required
                                 value={formData.form}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                disabled={loading}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                             >
                                 <option value="">Select form</option>
                                 <option value="Tablet">Tablet</option>
@@ -131,7 +136,8 @@ function AddMedication() {
                                 required
                                 value={formData.dose}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                disabled={loading}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                                 placeholder="e.g., 1 tablet"
                             />
                         </div>
@@ -146,7 +152,8 @@ function AddMedication() {
                                 required
                                 value={formData.frequency}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                disabled={loading}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                                 placeholder="e.g., Twice daily"
                             />
                         </div>
@@ -164,6 +171,7 @@ function AddMedication() {
                                     value="yes"
                                     checked={formData.prescribed === 'yes'}
                                     onChange={handleChange}
+                                    disabled={loading}
                                     className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
                                 />
                                 <span className="ml-2 text-gray-700">Yes</span>
@@ -175,6 +183,7 @@ function AddMedication() {
                                     value="no"
                                     checked={formData.prescribed === 'no'}
                                     onChange={handleChange}
+                                    disabled={loading}
                                     className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
                                 />
                                 <span className="ml-2 text-gray-700">No</span>
@@ -190,8 +199,9 @@ function AddMedication() {
                             name="comments"
                             value={formData.comments}
                             onChange={handleChange}
+                            disabled={loading}
                             rows="4"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                             placeholder="Any additional notes about this medication..."
                         />
                     </div>
@@ -199,14 +209,16 @@ function AddMedication() {
                     <div className="flex gap-4 pt-4">
                         <button
                             type="submit"
-                            className="flex-1 bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium transition-colors"
+                            disabled={loading}
+                            className="flex-1 bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium transition-colors disabled:bg-gray-400"
                         >
-                            Add Medication
+                            {loading ? 'Adding Medication...' : 'Add Medication'}
                         </button>
                         <button
                             type="button"
                             onClick={() => navigate(`/dashboard/patient/${id}`)}
-                            className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium transition-colors"
+                            disabled={loading}
+                            className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium transition-colors disabled:bg-gray-100"
                         >
                             Cancel
                         </button>

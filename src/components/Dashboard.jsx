@@ -13,7 +13,9 @@ function Dashboard({ user, onLogout }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex items-center">
-                            <h1 className="text-2xl font-bold text-[#3CA5A0]">Reconcila</h1>
+                            <Link to="/dashboard" className="text-2xl font-bold text-[#3CA5A0]">
+                                Reconcila
+                            </Link>
                         </div>
                         <div className="flex items-center space-x-4">
                             <Link
@@ -46,9 +48,9 @@ function Dashboard({ user, onLogout }) {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <Routes>
                     <Route path="/" element={<DashboardHome user={user} />} />
-                    <Route path="/add-patient" element={<AddPatient />} />
-                    <Route path="/patient/:id" element={<PatientDetail />} />
-                    <Route path="/patient/:id/add-medication" element={<AddMedication />} />
+                    <Route path="/add-patient" element={<AddPatient user={user} />} />
+                    <Route path="/patient/:id" element={<PatientDetail user={user} />} />
+                    <Route path="/patient/:id/add-medication" element={<AddMedication user={user} />} />
                 </Routes>
             </main>
         </div>

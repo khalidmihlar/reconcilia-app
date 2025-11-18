@@ -1,31 +1,58 @@
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { User, Plus } from 'lucide-react';
+import { patientAPI } from '../utils/api';
 
 function DashboardHome({ user }) {
     const [patients, setPatients] = useState([]);
     const [unreviewedLists, setUnreviewedLists] = useState([]);
     const [reconciledLists, setReconciledLists] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Load patients from localStorage
-        const storedPatients = localStorage.getItem('patients');
-        if (storedPatients) {
-            const allPatients = JSON.parse(storedPatients);
+        console.log('DashboardHome mounted, user:', user);
+        loadPatients();
+    }, [user]);
+
+    const loadPatients = async () => {
+        if (!user || !user.id) {
+            console.error('No user ID found');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+
+            console.log('Loading patients for doctor ID:', user.id);
+            const response = await patientAPI.getAll(user.id);
+            console.log('Patients loaded:', response);
+
+            const allPatients = response.patients || [];
+
             setPatients(allPatients);
 
             // Separate into unreviewed and reconciled
-            // For now, we'll randomly assign some as reconciled for demo
-            const unreviewed = allPatients.filter((_, idx) => idx % 3 !== 0);
-            const reconciled = allPatients.filter((_, idx) => idx % 3 === 0);
+            const unreviewed = allPatients.filter(p => (p.medication_count || 0) === 0);
+            const reconciled = allPatients.filter(p => (p.medication_count || 0) > 0);
 
             setUnreviewedLists(unreviewed);
             setReconciledLists(reconciled);
+
+            console.log('Unreviewed:', unreviewed.length, 'Reconciled:', reconciled.length);
+        } catch (err) {
+            console.error('Load patients error:', err);
+            setError('Failed to load patients: ' + err.message);
+        } finally {
+            setLoading(false);
         }
-    }, []);
+    };
 
     const handlePatientClick = (patientId) => {
+        console.log('Navigating to patient:', patientId);
         navigate(`/dashboard/patient/${patientId}`);
     };
 
@@ -51,6 +78,28 @@ function DashboardHome({ user }) {
         return age;
     };
 
+    if (loading) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-xl text-gray-600">Loading dashboard...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-xl text-red-600">{error}</p>
+                <button
+                    onClick={loadPatients}
+                    className="mt-4 px-6 py-2 bg-[#3CA5A0] text-white rounded-lg hover:bg-[#2d7e7a]"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
     return (
         <div>
             {/* Provider Profile Card */}
@@ -62,7 +111,9 @@ function DashboardHome({ user }) {
                         </div>
                         <div>
                             <h2 className="text-3xl font-bold text-gray-800">
-                                {user?.email?.split('@')[0] || 'Healthcare Provider'}
+                                {user?.first_name && user?.last_name
+                                    ? `${user.first_name} ${user.last_name}`
+                                    : user?.email?.split('@')[0] || 'Healthcare Provider'}
                             </h2>
                             <p className="text-gray-600 mt-1">{user?.email}</p>
                         </div>
@@ -101,13 +152,10 @@ function DashboardHome({ user }) {
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-2xl font-bold text-gray-800">Unreviewed Lists</h3>
-                        <button className="text-[#3CA5A0] font-semibold hover:text-[#2d7e7a]">
-                            See All
-                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {unreviewedLists.slice(0, 4).map((patient, index) => (
+                        {unreviewedLists.slice(0, 8).map((patient, index) => (
                             <div
                                 key={patient.id}
                                 onClick={() => handlePatientClick(patient.id)}
@@ -122,10 +170,10 @@ function DashboardHome({ user }) {
                                         <User className="w-12 h-12 text-white" />
                                     </div>
                                     <h4 className="text-lg font-semibold text-gray-800 text-center">
-                                        {patient.name.split(' ')[0]} {patient.name.split(' ')[1]?.[0]}., {calculateAge(patient.dateOfBirth)}
+                                        {patient.name.split(' ')[0]} {patient.name.split(' ')[1]?.[0]}., {calculateAge(patient.date_of_birth)}
                                     </h4>
                                     <p className="text-sm text-gray-600 text-center mt-1">
-                                        {patient.medications?.length || 0} medications
+                                        {patient.medication_count || 0} medications
                                     </p>
                                 </div>
                             </div>
@@ -140,9 +188,6 @@ function DashboardHome({ user }) {
                     <h3 className="text-2xl font-bold text-gray-800">
                         Tips for Medication Reconciliation
                     </h3>
-                    <button className="text-[#3CA5A0] font-semibold hover:text-[#2d7e7a]">
-                        See All
-                    </button>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-md p-6 flex space-x-6">
@@ -174,13 +219,10 @@ function DashboardHome({ user }) {
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-2xl font-bold text-gray-800">Reconciled Lists</h3>
-                        <button className="text-[#3CA5A0] font-semibold hover:text-[#2d7e7a]">
-                            See All
-                        </button>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {reconciledLists.slice(0, 4).map((patient, index) => (
+                        {reconciledLists.slice(0, 8).map((patient, index) => (
                             <div
                                 key={patient.id}
                                 onClick={() => handlePatientClick(patient.id)}
@@ -195,10 +237,10 @@ function DashboardHome({ user }) {
                                         <User className="w-12 h-12 text-white" />
                                     </div>
                                     <h4 className="text-lg font-semibold text-gray-800 text-center">
-                                        {patient.name.split(' ')[0]} {patient.name.split(' ')[1]?.[0]}., {calculateAge(patient.dateOfBirth)}
+                                        {patient.name.split(' ')[0]} {patient.name.split(' ')[1]?.[0]}., {calculateAge(patient.date_of_birth)}
                                     </h4>
                                     <p className="text-sm text-gray-600 text-center mt-1">
-                                        {patient.medications?.length || 0} medications
+                                        {patient.medication_count || 0} medications
                                     </p>
                                     <p className="text-xs text-green-600 text-center mt-2 font-semibold">
                                         ✓ Reconciled

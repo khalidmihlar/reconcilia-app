@@ -1,30 +1,35 @@
 import { useState } from 'react';
 import { Pill, ArrowRight } from 'lucide-react';
+import { authAPI } from '../utils/api';
 
 function Splash({ onLogin }) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
 
-        // Simple validation for MVP
         if (!email || !password) {
             setError('Please enter both email and password');
+            setLoading(false);
             return;
         }
 
-        // For MVP, accept any email/password combo
-        // Store user session
-        const user = {
-            email: email,
-            loggedInAt: new Date().toISOString(),
-        };
+        try {
+            const response = await authAPI.login(email, password);
 
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        onLogin(user);
+            // Store user session
+            localStorage.setItem('currentUser', JSON.stringify(response.doctor));
+            onLogin(response.doctor);
+        } catch (error) {
+            setError(error.message || 'Invalid credentials');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -58,7 +63,8 @@ function Splash({ onLogin }) {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                disabled={loading}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                                 placeholder="you@example.com"
                             />
                         </div>
@@ -71,22 +77,26 @@ function Splash({ onLogin }) {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                disabled={loading}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
                                 placeholder="••••••••"
                             />
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium transition-colors flex items-center justify-center group"
+                            disabled={loading}
+                            className="w-full bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium transition-colors flex items-center justify-center group disabled:bg-gray-400"
                         >
-                            Sign In
-                            <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                            {loading ? 'Signing in...' : 'Sign In'}
+                            {!loading && <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center text-sm text-gray-600">
-                        <p>Demo: Use any email/password to login</p>
+                        <p className="font-semibold mb-1">Test Credentials:</p>
+                        <p>Email: test@example.com</p>
+                        <p>Password: password123</p>
                     </div>
                 </div>
 
