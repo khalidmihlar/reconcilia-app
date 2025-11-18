@@ -39,13 +39,13 @@ function AddPatient() {
         localStorage.setItem('patients', JSON.stringify(existingPatients));
 
         // Navigate to patient list
-        navigate('/');
+        navigate('/dashboard');
     };
 
     return (
         <div className="max-w-2xl mx-auto">
             <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dashboard')}
                 className="flex items-center text-gray-600 hover:text-gray-800 mb-6"
             >
                 <ArrowLeft className="w-5 h-5 mr-2" />
@@ -66,7 +66,7 @@ function AddPatient() {
                             required
                             value={formData.name}
                             onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                             placeholder="John Doe"
                         />
                     </div>
@@ -81,7 +81,7 @@ function AddPatient() {
                             required
                             value={formData.email}
                             onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                             placeholder="john.doe@example.com"
                         />
                     </div>
@@ -96,7 +96,7 @@ function AddPatient() {
                             required
                             value={formData.phone}
                             onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                             placeholder="(555) 123-4567"
                         />
                     </div>
@@ -111,20 +111,20 @@ function AddPatient() {
                             required
                             value={formData.dateOfBirth}
                             onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                         />
                     </div>
 
                     <div className="flex gap-4 pt-4">
                         <button
                             type="submit"
-                            className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                            className="flex-1 bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium transition-colors"
                         >
                             Add Patient
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate('/')}
+                            onClick={() => navigate('/dashboard')}
                             className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium transition-colors"
                         >
                             Cancel

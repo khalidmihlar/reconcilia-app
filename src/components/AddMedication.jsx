@@ -47,14 +47,14 @@ function AddMedication() {
             localStorage.setItem('patients', JSON.stringify(patients));
 
             // Navigate back to patient detail
-            navigate(`/patient/${id}`);
+            navigate(`/dashboard/patient/${id}`);
         }
     };
 
     return (
         <div className="max-w-2xl mx-auto">
             <button
-                onClick={() => navigate(`/patient/${id}`)}
+                onClick={() => navigate(`/dashboard/patient/${id}`)}
                 className="flex items-center text-gray-600 hover:text-gray-800 mb-6"
             >
                 <ArrowLeft className="w-5 h-5 mr-2" />
@@ -75,7 +75,7 @@ function AddMedication() {
                             required
                             value={formData.name}
                             onChange={handleChange}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                             placeholder="e.g., Aspirin"
                         />
                     </div>
@@ -91,7 +91,7 @@ function AddMedication() {
                                 required
                                 value={formData.strength}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                                 placeholder="e.g., 100mg"
                             />
                         </div>
@@ -105,7 +105,7 @@ function AddMedication() {
                                 required
                                 value={formData.form}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                             >
                                 <option value="">Select form</option>
                                 <option value="Tablet">Tablet</option>
@@ -131,7 +131,7 @@ function AddMedication() {
                                 required
                                 value={formData.dose}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                                 placeholder="e.g., 1 tablet"
                             />
                         </div>
@@ -146,7 +146,7 @@ function AddMedication() {
                                 required
                                 value={formData.frequency}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                                 placeholder="e.g., Twice daily"
                             />
                         </div>
@@ -164,7 +164,7 @@ function AddMedication() {
                                     value="yes"
                                     checked={formData.prescribed === 'yes'}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
                                 />
                                 <span className="ml-2 text-gray-700">Yes</span>
                             </label>
@@ -175,7 +175,7 @@ function AddMedication() {
                                     value="no"
                                     checked={formData.prescribed === 'no'}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
                                 />
                                 <span className="ml-2 text-gray-700">No</span>
                             </label>
@@ -191,7 +191,7 @@ function AddMedication() {
                             value={formData.comments}
                             onChange={handleChange}
                             rows="4"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
                             placeholder="Any additional notes about this medication..."
                         />
                     </div>
@@ -199,13 +199,13 @@ function AddMedication() {
                     <div className="flex gap-4 pt-4">
                         <button
                             type="submit"
-                            className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                            className="flex-1 bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium transition-colors"
                         >
                             Add Medication
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate(`/patient/${id}`)}
+                            onClick={() => navigate(`/dashboard/patient/${id}`)}
                             className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium transition-colors"
                         >
                             Cancel

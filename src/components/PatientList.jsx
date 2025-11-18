@@ -15,7 +15,7 @@ function PatientList() {
     }, []);
 
     const handlePatientClick = (patientId) => {
-        navigate(`/patient/${patientId}`);
+        navigate(`/dashboard/patient/${patientId}`);
     };
 
     if (patients.length === 0) {
@@ -25,8 +25,8 @@ function PatientList() {
                 <h2 className="text-2xl font-semibold text-gray-700 mb-2">No Patients Yet</h2>
                 <p className="text-gray-500 mb-6">Get started by adding your first patient</p>
                 <button
-                    onClick={() => navigate('/add-patient')}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    onClick={() => navigate('/dashboard/add-patient')}
+                    className="px-6 py-3 bg-[#3CA5A0] text-white rounded-lg hover:bg-[#2d7e7a] font-medium"
                 >
                     Add Your First Patient
                 </button>
@@ -46,11 +46,11 @@ function PatientList() {
                     <div
                         key={patient.id}
                         onClick={() => handlePatientClick(patient.id)}
-                        className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border border-gray-200 hover:border-blue-400"
+                        className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border border-gray-200 hover:border-[#3CA5A0]"
                     >
                         <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                                <User className="w-6 h-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-[#E5F5F4] rounded-full flex items-center justify-center mr-4">
+                                <User className="w-6 h-6 text-[#3CA5A0]" />
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold text-gray-800">{patient.name}</h3>

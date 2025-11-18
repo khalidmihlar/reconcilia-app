@@ -1,82 +1,168 @@
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { User, Calendar, Mail, Phone } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Pill, Calendar, User, Mail, Phone } from 'lucide-react';
 
-function PatientList() {
-    const [patients, setPatients] = useState([]);
+function PatientDetail() {
+    const { id } = useParams();
     const navigate = useNavigate();
+    const [patient, setPatient] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load patients from localStorage
-        const storedPatients = localStorage.getItem('patients');
-        if (storedPatients) {
-            setPatients(JSON.parse(storedPatients));
-        }
-    }, []);
+        // Load patient from localStorage
+        const patients = JSON.parse(localStorage.getItem('patients') || '[]');
+        const foundPatient = patients.find(p => p.id === id);
+        setPatient(foundPatient);
+        setLoading(false);
+    }, [id]);
 
-    const handlePatientClick = (patientId) => {
-        navigate(`/patient/${patientId}`);
-    };
-
-    if (patients.length === 0) {
+    if (loading) {
         return (
             <div className="text-center py-12">
-                <User className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h2 className="text-2xl font-semibold text-gray-700 mb-2">No Patients Yet</h2>
-                <p className="text-gray-500 mb-6">Get started by adding your first patient</p>
+                <p className="text-xl text-gray-600">Loading...</p>
+            </div>
+        );
+    }
+
+    if (!patient) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-xl text-gray-600">Patient not found</p>
                 <button
-                    onClick={() => navigate('/add-patient')}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    onClick={() => navigate('/dashboard')}
+                    className="mt-4 px-6 py-2 bg-[#3CA5A0] text-white rounded-lg hover:bg-[#2d7e7a]"
                 >
-                    Add Your First Patient
+                    Back to Patient List
                 </button>
             </div>
         );
     }
 
     return (
-        <div>
-            <div className="mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">Patient Directory</h2>
-                <p className="text-gray-600 mt-2">Total Patients: {patients.length}</p>
-            </div>
+        <div className="max-w-4xl mx-auto">
+            <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center text-gray-600 hover:text-gray-800 mb-6"
+            >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                Back to Patient List
+            </button>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {patients.map((patient) => (
-                    <div
-                        key={patient.id}
-                        onClick={() => handlePatientClick(patient.id)}
-                        className="bg-white rounded-lg shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow border border-gray-200 hover:border-blue-400"
-                    >
-                        <div className="flex items-center mb-4">
-                            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                                <User className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-800">{patient.name}</h3>
-                                <p className="text-sm text-gray-500">ID: {patient.id}</p>
-                            </div>
-                        </div>
+            {/* Patient Info Card */}
+            <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+                <div className="flex items-center mb-6">
+                    <div className="w-16 h-16 bg-[#E5F5F4] rounded-full flex items-center justify-center mr-4">
+                        <User className="w-8 h-8 text-[#3CA5A0]" />
+                    </div>
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-800">{patient.name}</h2>
+                        <p className="text-gray-500">Patient ID: {patient.id}</p>
+                    </div>
+                </div>
 
-                        <div className="space-y-2">
-                            <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="w-4 h-4 mr-2" />
-                                <span>DOB: {patient.dateOfBirth}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <Mail className="w-4 h-4 mr-2" />
-                                <span>{patient.email}</span>
-                            </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                                <Phone className="w-4 h-4 mr-2" />
-                                <span>{patient.phone}</span>
-                            </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-center text-gray-700">
+                        <Calendar className="w-5 h-5 mr-3 text-gray-500" />
+                        <div>
+                            <p className="text-sm text-gray-500">Date of Birth</p>
+                            <p className="font-medium">{patient.dateOfBirth}</p>
                         </div>
                     </div>
-                ))}
+                    <div className="flex items-center text-gray-700">
+                        <Mail className="w-5 h-5 mr-3 text-gray-500" />
+                        <div>
+                            <p className="text-sm text-gray-500">Email</p>
+                            <p className="font-medium">{patient.email}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center text-gray-700">
+                        <Phone className="w-5 h-5 mr-3 text-gray-500" />
+                        <div>
+                            <p className="text-sm text-gray-500">Phone</p>
+                            <p className="font-medium">{patient.phone}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Medications Section */}
+            <div className="bg-white rounded-lg shadow-md p-8">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-bold text-gray-800">Medications</h3>
+                    <button
+                        onClick={() => navigate(`/dashboard/patient/${id}/add-medication`)}
+                        className="flex items-center px-4 py-2 bg-[#3CA5A0] text-white rounded-lg hover:bg-[#2d7e7a]"
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Add Medication
+                    </button>
+                </div>
+
+                {!patient.medications || patient.medications.length === 0 ? (
+                    <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                        <Pill className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+                        <p className="text-gray-500 mb-4">No medications recorded yet</p>
+                        <button
+                            onClick={() => navigate(`/dashboard/patient/${id}/add-medication`)}
+                            className="px-6 py-2 bg-[#3CA5A0] text-white rounded-lg hover:bg-[#2d7e7a]"
+                        >
+                            Add First Medication
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {patient.medications.map((med, index) => (
+                            <div
+                                key={index}
+                                className="border border-gray-200 rounded-lg p-4 hover:border-[#3CA5A0] transition-colors"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                        <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                                            {med.name}
+                                        </h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                            <div>
+                                                <span className="text-gray-500">Strength:</span>
+                                                <p className="font-medium text-gray-800">{med.strength}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Form:</span>
+                                                <p className="font-medium text-gray-800">{med.form}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Dose:</span>
+                                                <p className="font-medium text-gray-800">{med.dose}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500">Frequency:</span>
+                                                <p className="font-medium text-gray-800">{med.frequency}</p>
+                                            </div>
+                                        </div>
+                                        {med.comments && (
+                                            <div className="mt-3 pt-3 border-t border-gray-200">
+                                                <p className="text-sm text-gray-600">
+                                                    <span className="font-medium">Comments:</span> {med.comments}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="ml-4">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${med.prescribed === 'yes'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                            {med.prescribed === 'yes' ? 'Prescribed' : 'Not Prescribed'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-export default PatientList;
+export default PatientDetail;

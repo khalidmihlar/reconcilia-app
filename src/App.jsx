@@ -1,51 +1,56 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { Home, UserPlus, Users } from 'lucide-react';
-import PatientList from './components/PatientList';
-import AddPatient from './components/AddPatient';
-import PatientDetail from './components/PatientDetail';
-import AddMedication from './components/AddMedication';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import Splash from './components/Splash';
+import Dashboard from './components/Dashboard';
 
 function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is already logged in on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
+  }, []);
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    setUser(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
-        {/* Navigation Bar */}
-        <nav className="bg-white shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <h1 className="text-2xl font-bold text-blue-600">Reconcila</h1>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/"
-                  className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-100"
-                >
-                  <Users className="w-5 h-5 mr-2" />
-                  Patients
-                </Link>
-                <Link
-                  to="/add-patient"
-                  className="flex items-center px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Add Patient
-                </Link>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Routes>
-            <Route path="/" element={<PatientList />} />
-            <Route path="/add-patient" element={<AddPatient />} />
-            <Route path="/patient/:id" element={<PatientDetail />} />
-            <Route path="/patient/:id/add-medication" element={<AddMedication />} />
-          </Routes>
-        </main>
-      </div>
+      <Routes>
+        {/* If not logged in, show splash page */}
+        {!user ? (
+          <>
+            <Route path="/" element={<Splash onLogin={handleLogin} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </>
+        ) : (
+          /* If logged in, show dashboard */
+          <>
+            <Route path="/dashboard/*" element={<Dashboard user={user} onLogout={handleLogout} />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </>
+        )}
+      </Routes>
     </Router>
   );
 }
