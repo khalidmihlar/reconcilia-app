@@ -79,27 +79,11 @@ function AddMedication() {
                             onChange={handleChange}
                             disabled={loading}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
-                            placeholder="e.g., Aspirin"
+                            placeholder="e.g., Aspirin 81 mg"
                         />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Strength *
-                            </label>
-                            <input
-                                type="text"
-                                name="strength"
-                                required
-                                value={formData.strength}
-                                onChange={handleChange}
-                                disabled={loading}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
-                                placeholder="e.g., 100mg"
-                            />
-                        </div>
-
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Form *
@@ -122,6 +106,37 @@ function AddMedication() {
                                 <option value="Patch">Patch</option>
                                 <option value="Other">Other</option>
                             </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Prescribed? *
+                            </label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="prescribed"
+                                        value="yes"
+                                        checked={formData.prescribed === 'yes'}
+                                        onChange={handleChange}
+                                        disabled={loading}
+                                        className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                    />
+                                    <span className="ml-2 text-gray-700">Yes</span>
+                                </label>
+                                <label className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="prescribed"
+                                        value="no"
+                                        checked={formData.prescribed === 'no'}
+                                        onChange={handleChange}
+                                        disabled={loading}
+                                        className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                    />
+                                    <span className="ml-2 text-gray-700">No</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -159,37 +174,7 @@ function AddMedication() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Prescribed? *
-                        </label>
-                        <div className="flex gap-4">
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="prescribed"
-                                    value="yes"
-                                    checked={formData.prescribed === 'yes'}
-                                    onChange={handleChange}
-                                    disabled={loading}
-                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
-                                />
-                                <span className="ml-2 text-gray-700">Yes</span>
-                            </label>
-                            <label className="flex items-center">
-                                <input
-                                    type="radio"
-                                    name="prescribed"
-                                    value="no"
-                                    checked={formData.prescribed === 'no'}
-                                    onChange={handleChange}
-                                    disabled={loading}
-                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
-                                />
-                                <span className="ml-2 text-gray-700">No</span>
-                            </label>
-                        </div>
-                    </div>
+                    
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
