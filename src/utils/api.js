@@ -3,6 +3,8 @@ const API_URL = 'http://localhost:3001/api';
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {
     try {
+        console.log(`API Call: ${options.method || 'GET'} ${API_URL}${endpoint}`);
+
         const response = await fetch(`${API_URL}${endpoint}`, {
             headers: {
                 'Content-Type': 'application/json',
@@ -12,6 +14,7 @@ async function apiCall(endpoint, options = {}) {
         });
 
         const data = await response.json();
+        console.log(`API Response:`, data);
 
         if (!response.ok) {
             throw new Error(data.error || 'API request failed');
@@ -46,14 +49,17 @@ export const authAPI = {
 
 export const patientAPI = {
     getAll: async (doctorId) => {
+        console.log('Fetching all patients for doctor:', doctorId);
         return apiCall(`/patients?doctorId=${doctorId}`);
     },
 
     getById: async (patientId) => {
+        console.log('Fetching patient:', patientId);
         return apiCall(`/patients/${patientId}`);
     },
 
     create: async (doctorId, patientData) => {
+        console.log('Creating patient:', { doctorId, ...patientData });
         return apiCall('/patients', {
             method: 'POST',
             body: JSON.stringify({ doctorId, ...patientData }),
@@ -78,6 +84,7 @@ export const patientAPI = {
 
 export const medicationAPI = {
     getAllByPatient: async (patientId) => {
+        console.log('Fetching medications for patient:', patientId);
         return apiCall(`/patients/${patientId}/medications`);
     },
 
@@ -86,6 +93,7 @@ export const medicationAPI = {
     },
 
     create: async (patientId, medicationData) => {
+        console.log('Creating medication:', { patientId, ...medicationData });
         return apiCall(`/patients/${patientId}/medications`, {
             method: 'POST',
             body: JSON.stringify(medicationData),
@@ -106,4 +114,18 @@ export const medicationAPI = {
     },
 };
 
-export default { authAPI, patientAPI, medicationAPI };
+// ==================== MEDICATION CATALOG API ====================
+
+export const medicationCatalogAPI = {
+    getAll: async () => {
+        console.log('Fetching medication catalog');
+        return apiCall('/medication-catalog');
+    },
+
+    search: async (query) => {
+        console.log('Searching medications:', query);
+        return apiCall(`/medication-catalog/search?query=${encodeURIComponent(query)}`);
+    },
+};
+
+export default { authAPI, patientAPI, medicationAPI, medicationCatalogAPI };

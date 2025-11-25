@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { doctorQueries, patientQueries, medicationQueries } from './database.js';
+import db from './database.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -206,6 +207,39 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
     }
 });
 
+app.get('/api/medication-catalog', (req, res) => {
+    try {
+        const medications = db.prepare('SELECT * FROM medication_catalog ORDER BY name').all();
+        res.json({ medications });
+    } catch (error) {
+        console.error('Get medication catalog error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Search medications by name
+app.get('/api/medication-catalog/search', (req, res) => {
+    try {
+        const { query } = req.query;
+
+        if (!query || query.length < 2) {
+            return res.json({ medications: [] });
+        }
+
+        const medications = db.prepare(`
+      SELECT * FROM medication_catalog 
+      WHERE name LIKE ? 
+      ORDER BY name 
+      LIMIT 50
+    `).all(`%${query}%`);
+
+        res.json({ medications });
+    } catch (error) {
+        console.error('Search medication catalog error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Update medication
 app.put('/api/medications/:id', (req, res) => {
     try {
@@ -255,5 +289,7 @@ app.listen(PORT, () => {
     console.log(`\n🚀 Reconcila API Server running on http://localhost:${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/api/health\n`);
 });
+
+
 
 export default app;

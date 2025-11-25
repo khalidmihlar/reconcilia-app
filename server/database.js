@@ -6,7 +6,7 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.join(__dirname, '../reconcila.db');
+const dbPath = path.join(__dirname, '../database/reconcila.db');
 
 // Check if database exists
 const dbExists = fs.existsSync(dbPath);

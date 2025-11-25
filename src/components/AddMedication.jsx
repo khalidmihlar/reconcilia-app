@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { medicationAPI } from '../utils/api';
+import { ArrowLeft, Search } from 'lucide-react';
+import { medicationAPI, medicationCatalogAPI } from '../utils/api';
 
 function AddMedication() {
     const { id } = useParams();
@@ -18,6 +18,65 @@ function AddMedication() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Medication catalog state
+    const [medications, setMedications] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [isOther, setIsOther] = useState(false);
+    const [customMedName, setCustomMedName] = useState('');
+
+    // Load all medications on mount
+    useEffect(() => {
+        loadMedications();
+    }, []);
+
+    const loadMedications = async () => {
+        try {
+            const response = await medicationCatalogAPI.getAll();
+            setMedications(response.medications || []);
+        } catch (err) {
+            console.error('Failed to load medication catalog:', err);
+        }
+    };
+
+    // Filter medications based on search
+    const filteredMedications = medications.filter(med =>
+        med.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleMedicationSelect = (medication) => {
+        setFormData({
+            ...formData,
+            name: medication.name,
+            form: medication.form,
+        });
+        setSearchTerm(medication.name);
+        setShowDropdown(false);
+        setIsOther(false);
+    };
+
+    const handleOtherSelect = () => {
+        setIsOther(true);
+        setShowDropdown(false);
+        setSearchTerm('');
+        setFormData({
+            ...formData,
+            name: '',
+            form: '',
+        });
+    };
+
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+        setShowDropdown(true);
+
+        // If typing and was "Other", switch back to catalog mode
+        if (isOther && value) {
+            setIsOther(false);
+        }
+    };
+
     const handleChange = (e) => {
         setFormData({
             ...formData,
@@ -33,7 +92,17 @@ function AddMedication() {
         try {
             console.log('Adding medication for patient:', id);
 
-            await medicationAPI.create(parseInt(id), formData);
+            // Use custom name if "Other" is selected
+            const medicationName = isOther ? customMedName : formData.name;
+
+            if (!medicationName) {
+                throw new Error('Please enter a medication name');
+            }
+
+            await medicationAPI.create(parseInt(id), {
+                ...formData,
+                name: medicationName,
+            });
 
             console.log('Medication added successfully');
 
@@ -67,83 +136,127 @@ function AddMedication() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
+                    {/* Medication Name - Searchable Dropdown */}
+                    <div className="relative">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Medication Name *
                         </label>
-                        <input
-                            type="text"
-                            name="name"
-                            required
-                            value={formData.name}
-                            onChange={handleChange}
-                            disabled={loading}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
-                            placeholder="e.g., Aspirin 81 mg"
-                        />
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Form *
-                            </label>
-                            <select
-                                name="form"
-                                required
-                                value={formData.form}
-                                onChange={handleChange}
-                                disabled={loading}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
-                            >
-                                <option value="">Select form</option>
-                                <option value="Tablet">Tablet</option>
-                                <option value="Capsule">Capsule</option>
-                                <option value="Liquid">Liquid</option>
-                                <option value="Injection">Injection</option>
-                                <option value="Inhaler">Inhaler</option>
-                                <option value="Cream">Cream</option>
-                                <option value="Patch">Patch</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Prescribed? *
-                            </label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center">
+                        {!isOther ? (
+                            <div className="relative">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                                     <input
-                                        type="radio"
-                                        name="prescribed"
-                                        value="yes"
-                                        checked={formData.prescribed === 'yes'}
-                                        onChange={handleChange}
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        onFocus={() => setShowDropdown(true)}
                                         disabled={loading}
-                                        className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
+                                        placeholder="Search medications..."
+                                        autoComplete="off"
                                     />
-                                    <span className="ml-2 text-gray-700">Yes</span>
-                                </label>
-                                <label className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        name="prescribed"
-                                        value="no"
-                                        checked={formData.prescribed === 'no'}
-                                        onChange={handleChange}
-                                        disabled={loading}
-                                        className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
-                                    />
-                                    <span className="ml-2 text-gray-700">No</span>
-                                </label>
+                                </div>
+
+                                {/* Dropdown */}
+                                {showDropdown && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                        {filteredMedications.length > 0 ? (
+                                            filteredMedications.slice(0, 50).map((med) => (
+                                                <div
+                                                    key={med.id}
+                                                    onClick={() => handleMedicationSelect(med)}
+                                                    className="px-4 py-2 hover:bg-[#E5F5F4] cursor-pointer flex justify-between items-center"
+                                                >
+                                                    <span className="font-medium">{med.name}</span>
+                                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                        {med.form}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="px-4 py-2 text-gray-500 text-sm">
+                                                No medications found
+                                            </div>
+                                        )}
+
+                                        {/* Other Option */}
+                                        <div
+                                            onClick={handleOtherSelect}
+                                            className="px-4 py-2 hover:bg-yellow-50 cursor-pointer border-t border-gray-200 font-medium text-[#3CA5A0]"
+                                        >
+                                            + Other (Enter custom medication)
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        </div>
+                        ) : (
+                            <div>
+                                <input
+                                    type="text"
+                                    value={customMedName}
+                                    onChange={(e) => setCustomMedName(e.target.value)}
+                                    disabled={loading}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
+                                    placeholder="Enter custom medication name (e.g., Aspirin 81 mg)"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsOther(false);
+                                        setCustomMedName('');
+                                        setShowDropdown(true);
+                                    }}
+                                    className="mt-2 text-sm text-[#3CA5A0] hover:underline"
+                                >
+                                    ← Back to catalog
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Route of Administration */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Route of Administration *
+                        </label>
+                        <select
+                            name="form"
+                            required
+                            value={formData.form}
+                            onChange={handleChange}
+                            disabled={loading || (!isOther && !formData.name)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
+                        >
+                            <option value="">Select route</option>
+                            <option value="Oral">Oral</option>
+                            <option value="Sublingual">Sublingual</option>
+                            <option value="Buccal">Buccal</option>
+                            <option value="Intravenous">Intravenous (IV)</option>
+                            <option value="Intramuscular">Intramuscular (IM)</option>
+                            <option value="Subcutaneous">Subcutaneous (SC)</option>
+                            <option value="Topical">Topical</option>
+                            <option value="Transdermal">Transdermal</option>
+                            <option value="Inhalation">Inhalation</option>
+                            <option value="Nasal">Nasal</option>
+                            <option value="Ophthalmic">Ophthalmic</option>
+                            <option value="Otic">Otic</option>
+                            <option value="Rectal">Rectal</option>
+                            <option value="Vaginal">Vaginal</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        {!isOther && formData.name && (
+                            <p className="text-xs text-gray-500 mt-1">
+                                Auto-filled from catalog selection
+                            </p>
+                        )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Dose *
+                                Prescribed Dose *
                             </label>
                             <input
                                 type="text"
@@ -169,12 +282,42 @@ function AddMedication() {
                                 onChange={handleChange}
                                 disabled={loading}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
-                                placeholder="e.g., Twice daily"
+                                placeholder="e.g., Once daily"
                             />
                         </div>
                     </div>
 
-                    
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Prescribed? *
+                        </label>
+                        <div className="flex gap-4">
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name="prescribed"
+                                    value="yes"
+                                    checked={formData.prescribed === 'yes'}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                />
+                                <span className="ml-2 text-gray-700">Yes</span>
+                            </label>
+                            <label className="flex items-center">
+                                <input
+                                    type="radio"
+                                    name="prescribed"
+                                    value="no"
+                                    checked={formData.prescribed === 'no'}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                />
+                                <span className="ml-2 text-gray-700">No</span>
+                            </label>
+                        </div>
+                    </div>
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
