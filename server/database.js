@@ -159,50 +159,185 @@ export const patientQueries = {
         const stmt = db.prepare('DELETE FROM patients WHERE id = ?');
         const result = stmt.run(patientId);
         return result.changes;
-    }
+    },
+    // Add these functions to the patientQueries object in server/database.js
+    updateReconciliationStatus: (patientId, isReconciled) => {
+      const stmt = db.prepare(`
+        UPDATE patients 
+        SET is_reconciled = ?, 
+            last_reconciled_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `);
+      const result = stmt.run(isReconciled ? 1 : 0, patientId);
+      return result.changes;
+    },
+
+    getReconciliationStatus: (patientId) => {
+      const stmt = db.prepare(`
+        SELECT 
+          p.is_reconciled,
+          p.last_reconciled_at,
+          COUNT(CASE WHEN m.status = 'active' THEN 1 END) as total_active,
+          COUNT(CASE WHEN m.status = 'active' AND m.is_taking = 1 THEN 1 END) as checked_active
+        FROM patients p
+        LEFT JOIN medications m ON m.patient_id = p.id
+        WHERE p.id = ?
+        GROUP BY p.id
+      `);
+      return stmt.get(patientId);
+    },
+  // Add these functions to the patientQueries object in server/database.js
+
+  updateReconciliationStatus: (patientId, isReconciled) => {
+    const stmt = db.prepare(`
+      UPDATE patients 
+      SET is_reconciled = ?, 
+          last_reconciled_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    const result = stmt.run(isReconciled ? 1 : 0, patientId);
+    return result.changes;
+  },
+
+  updateReconciliationChecklist: (patientId, askedOtcs, askedAllergies, askedMedicationAccess) => {
+    const stmt = db.prepare(`
+      UPDATE patients 
+      SET asked_otcs_topicals_injectables = ?,
+          asked_allergies = ?,
+          asked_medication_access = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    const result = stmt.run(
+      askedOtcs ? 1 : 0,
+      askedAllergies ? 1 : 0,
+      askedMedicationAccess ? 1 : 0,
+      patientId
+    );
+    return result.changes;
+  },
+
+  getReconciliationStatus: (patientId) => {
+    const stmt = db.prepare(`
+      SELECT 
+        p.is_reconciled,
+        p.last_reconciled_at,
+        p.asked_otcs_topicals_injectables,
+        p.asked_allergies,
+        p.asked_medication_access,
+        COUNT(CASE WHEN m.status = 'active' THEN 1 END) as total_active,
+        COUNT(CASE WHEN m.status = 'active' AND m.is_taking = 1 THEN 1 END) as checked_active
+      FROM patients p
+      LEFT JOIN medications m ON m.patient_id = p.id
+      WHERE p.id = ?
+      GROUP BY p.id
+    `);
+    return stmt.get(patientId);
+  },
 };
 
 // ==================== MEDICATION QUERIES ====================
 
 export const medicationQueries = {
-    create: (patientId, name, strength, form, dose, frequency, prescribed, comments) => {
-        const stmt = db.prepare(`
-      INSERT INTO medications (patient_id, name, strength, form, dose, frequency, prescribed, comments)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  create: (patientId, name, strength, form, dose, frequency, prescribed, comments) => {
+    const stmt = db.prepare(`
+      INSERT INTO medications (patient_id, name, strength, form, dose, frequency, prescribed, comments, status, is_taking)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)
     `);
-        const result = stmt.run(patientId, name, strength, form, dose, frequency, prescribed, comments);
-        return result.lastInsertRowid;
-    },
+    const result = stmt.run(patientId, name, strength, form, dose, frequency, prescribed, comments);
+    return result.lastInsertRowid;
+  },
 
-    getAllByPatient: (patientId) => {
-        const stmt = db.prepare(`
+  getAllByPatient: (patientId) => {
+    const stmt = db.prepare(`
       SELECT * FROM medications 
       WHERE patient_id = ?
+      ORDER BY 
+        CASE status 
+          WHEN 'active' THEN 1 
+          WHEN 'archived' THEN 2 
+          ELSE 3 
+        END,
+        added_at DESC
+    `);
+    return stmt.all(patientId);
+  },
+
+  getActiveByPatient: (patientId) => {
+    const stmt = db.prepare(`
+      SELECT * FROM medications 
+      WHERE patient_id = ? AND status = 'active'
       ORDER BY added_at DESC
     `);
-        return stmt.all(patientId);
-    },
+    return stmt.all(patientId);
+  },
 
-    findById: (medicationId) => {
-        const stmt = db.prepare('SELECT * FROM medications WHERE id = ?');
-        return stmt.get(medicationId);
-    },
+  getArchivedByPatient: (patientId) => {
+    const stmt = db.prepare(`
+      SELECT * FROM medications 
+      WHERE patient_id = ? AND status = 'archived'
+      ORDER BY added_at DESC
+    `);
+    return stmt.all(patientId);
+  },
 
-    update: (medicationId, name, strength, form, dose, frequency, prescribed, comments) => {
-        const stmt = db.prepare(`
+  findById: (medicationId) => {
+    const stmt = db.prepare('SELECT * FROM medications WHERE id = ?');
+    return stmt.get(medicationId);
+  },
+
+  update: (medicationId, name, strength, form, dose, frequency, prescribed, comments) => {
+    const stmt = db.prepare(`
       UPDATE medications
       SET name = ?, strength = ?, form = ?, dose = ?, frequency = ?, prescribed = ?, comments = ?
       WHERE id = ?
     `);
-        const result = stmt.run(name, strength, form, dose, frequency, prescribed, comments, medicationId);
-        return result.changes;
-    },
+    const result = stmt.run(name, strength, form, dose, frequency, prescribed, comments, medicationId);
+    return result.changes;
+  },
 
-    delete: (medicationId) => {
-        const stmt = db.prepare('DELETE FROM medications WHERE id = ?');
-        const result = stmt.run(medicationId);
-        return result.changes;
-    }
+  updateStatus: (medicationId, status) => {
+    const stmt = db.prepare(`
+      UPDATE medications
+      SET status = ?
+      WHERE id = ?
+    `);
+    const result = stmt.run(status, medicationId);
+    return result.changes;
+  },
+
+  updateIsTaking: (medicationId, isTaking) => {
+    const stmt = db.prepare(`
+      UPDATE medications
+      SET is_taking = ?
+      WHERE id = ?
+    `);
+    const result = stmt.run(isTaking ? 1 : 0, medicationId);
+    return result.changes;
+  },
+
+  delete: (medicationId) => {
+    const stmt = db.prepare('DELETE FROM medications WHERE id = ?');
+    const result = stmt.run(medicationId);
+    return result.changes;
+  },
+  batchUpdateTaking: (medicationUpdates) => {
+    const stmt = db.prepare(`
+      UPDATE medications
+      SET is_taking = ?
+      WHERE id = ?
+    `);
+
+    const updateMany = db.transaction((updates) => {
+      for (const update of updates) {
+        stmt.run(update.isTaking ? 1 : 0, update.id);
+      }
+    });
+
+    updateMany(medicationUpdates);
+  },
 };
 
 export default db;

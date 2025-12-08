@@ -39,9 +39,9 @@ function AddMedication() {
         }
     };
 
-    // Filter medications based on search
+    // Filter medications based on search (starts with)
     const filteredMedications = medications.filter(med =>
-        med.name.toLowerCase().includes(searchTerm.toLowerCase())
+        med.name.toLowerCase().startsWith(searchTerm.toLowerCase())
     );
 
     const handleMedicationSelect = (medication) => {

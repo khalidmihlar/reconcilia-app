@@ -35,14 +35,16 @@ function DashboardHome({ user }) {
 
             setPatients(allPatients);
 
-            // Separate into unreviewed and reconciled
-            const unreviewed = allPatients.filter(p => (p.medication_count || 0) === 0);
-            const reconciled = allPatients.filter(p => (p.medication_count || 0) > 0);
+            // Separate based on is_reconciled field
+            const unreviewed = allPatients.filter(p => p.is_reconciled === 0 || p.is_reconciled === null);
+            const reconciled = allPatients.filter(p => p.is_reconciled === 1);
 
             setUnreviewedLists(unreviewed);
             setReconciledLists(reconciled);
 
             console.log('Unreviewed:', unreviewed.length, 'Reconciled:', reconciled.length);
+            console.log('Unreviewed patients:', unreviewed.map(p => ({ id: p.id, name: p.name, is_reconciled: p.is_reconciled })));
+            console.log('Reconciled patients:', reconciled.map(p => ({ id: p.id, name: p.name, is_reconciled: p.is_reconciled })));
         } catch (err) {
             console.error('Load patients error:', err);
             setError('Failed to load patients: ' + err.message);

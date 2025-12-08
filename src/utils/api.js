@@ -78,6 +78,14 @@ export const patientAPI = {
             method: 'DELETE',
         });
     },
+
+    saveDraft: async (patientId, medicationStatuses, checklist) => {
+        console.log('Saving draft for patient:', patientId, medicationStatuses, checklist);
+        return apiCall(`/patients/${patientId}/save-draft`, {
+            method: 'POST',
+            body: JSON.stringify({ medicationStatuses, checklist }),
+        });
+    },
 };
 
 // ==================== MEDICATION API ====================
@@ -111,6 +119,30 @@ export const medicationAPI = {
         return apiCall(`/medications/${medicationId}`, {
             method: 'DELETE',
         });
+    },
+
+    updateStatus: async (medicationId, status) => {
+        console.log('Updating medication status:', medicationId, status);
+        return apiCall(`/medications/${medicationId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status }),
+        });
+    },
+
+    updateIsTaking: async (medicationId, isTaking) => {
+        console.log('Updating medication taking status:', medicationId, isTaking);
+        return apiCall(`/medications/${medicationId}/taking`, {
+            method: 'PATCH',
+            body: JSON.stringify({ isTaking }),
+        });
+    },
+
+    getActive: async (patientId) => {
+        return apiCall(`/patients/${patientId}/medications/active`);
+    },
+
+    getArchived: async (patientId) => {
+        return apiCall(`/patients/${patientId}/medications/archived`);
     },
 };
 
