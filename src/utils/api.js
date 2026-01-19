@@ -115,6 +115,10 @@ export const medicationAPI = {
         });
     },
 
+    checkIfDeleted: async (patientId, medicationName) => {
+        return apiCall(`/patients/${patientId}/medications/check-deleted/${encodeURIComponent(medicationName)}`);
+    },
+
     delete: async (medicationId) => {
         return apiCall(`/medications/${medicationId}`, {
             method: 'DELETE',

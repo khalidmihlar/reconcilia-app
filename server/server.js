@@ -231,18 +231,69 @@ app.post('/api/patients/:patientId/save-draft', (req, res) => {
     }
 });
 
-// Get single medication
-app.get('/api/medications/:id', (req, res) => {
+// Check if medication was previously deleted
+// Check if medication was previously deleted or archived
+app.get('/api/patients/:patientId/medications/check-deleted/:medicationName', (req, res) => {
     try {
-        const medication = medicationQueries.findById(parseInt(req.params.id));
+        const patientId = parseInt(req.params.patientId);
+        const medicationName = decodeURIComponent(req.params.medicationName);
 
-        if (!medication) {
+        console.log('Checking medication:', medicationName, 'for patient:', patientId);
+
+        const previousMed = medicationQueries.checkIfPreviouslyArchivedOrDeleted(patientId, medicationName);
+
+        console.log('Previous medication found:', previousMed);
+
+        if (previousMed) {
+            const status = previousMed.deleted_at ? 'deleted' : 'archived';
+            res.json({
+                wasFound: true,
+                status: status,
+                medication: previousMed
+            });
+        } else {
+            res.json({
+                wasFound: false,
+                status: null,
+                medication: null
+            });
+        }
+    } catch (error) {
+        console.error('Check deleted medication error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Update existing PUT route to include intended_duration
+app.put('/api/medications/:id', (req, res) => {
+    try {
+        const medicationId = parseInt(req.params.id);
+        const { name, strength, form, dose, frequency, prescribed, comments, intendedDuration } = req.body;
+
+        if (!name || !form || !dose || !frequency) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const changes = medicationQueries.update(
+            medicationId,
+            name,
+            strength,
+            form,
+            dose,
+            frequency,
+            prescribed,
+            comments,
+            intendedDuration
+        );
+
+        if (changes === 0) {
             return res.status(404).json({ error: 'Medication not found' });
         }
 
+        const medication = medicationQueries.findById(medicationId);
         res.json({ medication });
     } catch (error) {
-        console.error('Get medication error:', error);
+        console.error('Update medication error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });
@@ -367,27 +418,6 @@ app.get('/api/medication-catalog/search', (req, res) => {
     }
 });
 
-// Update medication
-app.put('/api/medications/:id', (req, res) => {
-    try {
-        const medicationId = parseInt(req.params.id);
-        const { name, strength, form, dose, frequency, prescribed, comments } = req.body;
-
-        const changes = medicationQueries.update(
-            medicationId, name, strength, form, dose, frequency, prescribed, comments
-        );
-
-        if (changes === 0) {
-            return res.status(404).json({ error: 'Medication not found' });
-        }
-
-        const medication = medicationQueries.findById(medicationId);
-        res.json({ medication });
-    } catch (error) {
-        console.error('Update medication error:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
 
 // Delete medication
 app.delete('/api/medications/:id', (req, res) => {

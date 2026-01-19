@@ -241,19 +241,19 @@ export const patientQueries = {
 // ==================== MEDICATION QUERIES ====================
 
 export const medicationQueries = {
-  create: (patientId, name, strength, form, dose, frequency, prescribed, comments) => {
+  create: (patientId, name, strength, form, dose, frequency, prescribed, comments, intendedDuration) => {
     const stmt = db.prepare(`
-      INSERT INTO medications (patient_id, name, strength, form, dose, frequency, prescribed, comments, status, is_taking)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)
+      INSERT INTO medications (patient_id, name, strength, form, dose, frequency, prescribed, comments, intended_duration, status, is_taking)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)
     `);
-    const result = stmt.run(patientId, name, strength, form, dose, frequency, prescribed, comments);
+    const result = stmt.run(patientId, name, strength, form, dose, frequency, prescribed, comments, intendedDuration);
     return result.lastInsertRowid;
   },
 
   getAllByPatient: (patientId) => {
     const stmt = db.prepare(`
       SELECT * FROM medications 
-      WHERE patient_id = ?
+      WHERE patient_id = ? AND deleted_at IS NULL
       ORDER BY 
         CASE status 
           WHEN 'active' THEN 1 
@@ -268,7 +268,7 @@ export const medicationQueries = {
   getActiveByPatient: (patientId) => {
     const stmt = db.prepare(`
       SELECT * FROM medications 
-      WHERE patient_id = ? AND status = 'active'
+      WHERE patient_id = ? AND status = 'active' AND deleted_at IS NULL
       ORDER BY added_at DESC
     `);
     return stmt.all(patientId);
@@ -277,10 +277,45 @@ export const medicationQueries = {
   getArchivedByPatient: (patientId) => {
     const stmt = db.prepare(`
       SELECT * FROM medications 
-      WHERE patient_id = ? AND status = 'archived'
-      ORDER BY added_at DESC
+      WHERE patient_id = ? AND status = 'archived' AND deleted_at IS NULL
+      ORDER BY archived_at DESC
     `);
     return stmt.all(patientId);
+  },
+
+  getDeletedByPatient: (patientId) => {
+    const stmt = db.prepare(`
+      SELECT * FROM medications 
+      WHERE patient_id = ? AND deleted_at IS NOT NULL
+      ORDER BY deleted_at DESC
+    `);
+    return stmt.all(patientId);
+  },
+
+  checkIfPreviouslyDeleted: (patientId, medicationName) => {
+    const stmt = db.prepare(`
+      SELECT * FROM medications 
+      WHERE patient_id = ? AND LOWER(name) = LOWER(?) AND deleted_at IS NOT NULL
+      ORDER BY deleted_at DESC
+      LIMIT 1
+    `);
+    return stmt.get(patientId, medicationName);
+  },
+
+  checkIfPreviouslyArchivedOrDeleted: (patientId, medicationName) => {
+    const stmt = db.prepare(`
+      SELECT * FROM medications 
+      WHERE patient_id = ? AND LOWER(name) = LOWER(?) AND (status = 'archived' OR deleted_at IS NOT NULL)
+      ORDER BY 
+        CASE 
+          WHEN deleted_at IS NOT NULL THEN 1
+          WHEN status = 'archived' THEN 2
+          ELSE 3
+        END,
+        COALESCE(deleted_at, archived_at) DESC
+      LIMIT 1
+    `);
+    return stmt.get(patientId, medicationName);
   },
 
   findById: (medicationId) => {
@@ -288,23 +323,23 @@ export const medicationQueries = {
     return stmt.get(medicationId);
   },
 
-  update: (medicationId, name, strength, form, dose, frequency, prescribed, comments) => {
+  update: (medicationId, name, strength, form, dose, frequency, prescribed, comments, intendedDuration) => {
     const stmt = db.prepare(`
       UPDATE medications
-      SET name = ?, strength = ?, form = ?, dose = ?, frequency = ?, prescribed = ?, comments = ?
+      SET name = ?, strength = ?, form = ?, dose = ?, frequency = ?, prescribed = ?, comments = ?, intended_duration = ?
       WHERE id = ?
     `);
-    const result = stmt.run(name, strength, form, dose, frequency, prescribed, comments, medicationId);
+    const result = stmt.run(name, strength, form, dose, frequency, prescribed, comments, intendedDuration, medicationId);
     return result.changes;
   },
 
   updateStatus: (medicationId, status) => {
     const stmt = db.prepare(`
       UPDATE medications
-      SET status = ?
+      SET status = ?, archived_at = CASE WHEN ? = 'archived' THEN CURRENT_TIMESTAMP ELSE archived_at END
       WHERE id = ?
     `);
-    const result = stmt.run(status, medicationId);
+    const result = stmt.run(status, status, medicationId);
     return result.changes;
   },
 
@@ -318,11 +353,6 @@ export const medicationQueries = {
     return result.changes;
   },
 
-  delete: (medicationId) => {
-    const stmt = db.prepare('DELETE FROM medications WHERE id = ?');
-    const result = stmt.run(medicationId);
-    return result.changes;
-  },
   batchUpdateTaking: (medicationUpdates) => {
     const stmt = db.prepare(`
       UPDATE medications
@@ -338,6 +368,16 @@ export const medicationQueries = {
 
     updateMany(medicationUpdates);
   },
+
+  delete: (medicationId) => {
+    const stmt = db.prepare(`
+      UPDATE medications
+      SET deleted_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `);
+    const result = stmt.run(medicationId);
+    return result.changes;
+  }
 };
 
 export default db;

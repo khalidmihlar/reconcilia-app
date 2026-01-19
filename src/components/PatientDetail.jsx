@@ -13,6 +13,8 @@ function PatientDetail() {
     const [archivedMeds, setArchivedMeds] = useState([]);
     const [showArchived, setShowArchived] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [editingMed, setEditingMed] = useState(null);
+    const [editForm, setEditForm] = useState({});
     const [saving, setSaving] = useState(false);
 
     // Track checkbox states locally (not saved until "Save Draft")
@@ -153,6 +155,54 @@ function PatientDetail() {
         }
     };
 
+    const handleEditClick = (med) => {
+        setEditingMed(med);
+        setEditForm({
+            name: med.name,
+            form: med.form,
+            dose: med.dose,
+            frequency: med.frequency,
+            prescribed: med.prescribed,
+            comments: med.comments || '',
+            intendedDuration: med.intended_duration || '',
+        });
+    };
+
+    const handleEditChange = (e) => {
+        setEditForm(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
+
+    const handleEditSave = async () => {
+        try {
+            setSaving(true);
+            await medicationAPI.update(editingMed.id, editForm);
+            setEditingMed(null);
+            await loadPatient();
+        } catch (err) {
+            console.error('Failed to update medication:', err);
+            alert('Failed to update medication');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    const calculateDuration = (startDate, endDate) => {
+        const start = new Date(startDate);
+        const end = endDate ? new Date(endDate) : new Date();
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return `${diffDays} days`;
+    };
+
     if (loading) {
         return (
             <div className="text-center py-12">
@@ -207,6 +257,19 @@ function PatientDetail() {
                             }`}>
                             {med.name}
                         </h4>
+
+                        {/* Duration Display */}
+                        {isArchived && med.archived_at ? (
+                            <p className="text-sm text-gray-600 mb-2">
+                                Active: {formatDate(med.added_at)} - {formatDate(med.archived_at)} ({calculateDuration(med.added_at, med.archived_at)})
+                            </p>
+                        ) : (
+                            <p className="text-sm text-gray-600 mb-2">
+                                Started: {formatDate(med.added_at)}
+                                {med.intended_duration && ` • Duration: ${med.intended_duration}`}
+                            </p>
+                        )}
+
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                             <div>
                                 <span className="text-gray-500">Route:</span>
@@ -240,6 +303,17 @@ function PatientDetail() {
                     </span>
 
                     <div className="flex gap-2">
+                        {!isArchived && (
+                            <button
+                                onClick={() => handleEditClick(med)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit medication"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        )}
                         {!isArchived ? (
                             <button
                                 onClick={() => handleArchive(med.id)}
@@ -478,6 +552,161 @@ function PatientDetail() {
                             <button
                                 onClick={() => setDeleteConfirm(null)}
                                 className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 font-medium"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Medication Modal */}
+            {editingMed && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-6">Edit Medication</h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Medication Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value={editForm.name}
+                                    onChange={handleEditChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Route of Administration *
+                                </label>
+                                <select
+                                    name="form"
+                                    value={editForm.form}
+                                    onChange={handleEditChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                >
+                                    <option value="">Select route</option>
+                                    <option value="Oral">Oral</option>
+                                    <option value="Sublingual">Sublingual</option>
+                                    <option value="Buccal">Buccal</option>
+                                    <option value="Intravenous">Intravenous (IV)</option>
+                                    <option value="Intramuscular">Intramuscular (IM)</option>
+                                    <option value="Subcutaneous">Subcutaneous (SC)</option>
+                                    <option value="Topical">Topical</option>
+                                    <option value="Transdermal">Transdermal</option>
+                                    <option value="Inhalation">Inhalation</option>
+                                    <option value="Nasal">Nasal</option>
+                                    <option value="Ophthalmic">Ophthalmic</option>
+                                    <option value="Otic">Otic</option>
+                                    <option value="Rectal">Rectal</option>
+                                    <option value="Vaginal">Vaginal</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Prescribed Dose *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="dose"
+                                        value={editForm.dose}
+                                        onChange={handleEditChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Frequency *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="frequency"
+                                        value={editForm.frequency}
+                                        onChange={handleEditChange}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Intended Duration
+                                </label>
+                                <input
+                                    type="text"
+                                    name="intendedDuration"
+                                    value={editForm.intendedDuration}
+                                    onChange={handleEditChange}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                    placeholder="e.g., 30 days, 2 weeks, Ongoing"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Prescribed? *
+                                </label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            name="prescribed"
+                                            value="yes"
+                                            checked={editForm.prescribed === 'yes'}
+                                            onChange={handleEditChange}
+                                            className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        />
+                                        <span className="ml-2 text-gray-700">Yes</span>
+                                    </label>
+                                    <label className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            name="prescribed"
+                                            value="no"
+                                            checked={editForm.prescribed === 'no'}
+                                            onChange={handleEditChange}
+                                            className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        />
+                                        <span className="ml-2 text-gray-700">No</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Comments
+                                </label>
+                                <textarea
+                                    name="comments"
+                                    value={editForm.comments}
+                                    onChange={handleEditChange}
+                                    rows="3"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-6">
+                            <button
+                                onClick={handleEditSave}
+                                disabled={saving}
+                                className="flex-1 bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium disabled:bg-gray-400"
+                            >
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button
+                                onClick={() => setEditingMed(null)}
+                                disabled={saving}
+                                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium"
                             >
                                 Cancel
                             </button>

@@ -14,9 +14,11 @@ function AddMedication() {
         frequency: '',
         prescribed: 'yes',
         comments: '',
+        intendedDuration: '',
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [deletedWarning, setDeletedWarning] = useState(null);
 
     // Medication catalog state
     const [medications, setMedications] = useState([]);
@@ -44,7 +46,7 @@ function AddMedication() {
         med.name.toLowerCase().startsWith(searchTerm.toLowerCase())
     );
 
-    const handleMedicationSelect = (medication) => {
+    const handleMedicationSelect = async (medication) => {
         setFormData({
             ...formData,
             name: medication.name,
@@ -53,6 +55,19 @@ function AddMedication() {
         setSearchTerm(medication.name);
         setShowDropdown(false);
         setIsOther(false);
+
+        // Check if this medication was previously deleted or archived
+        try {
+            console.log('Checking for previous medication:', medication.name);
+            const response = await medicationAPI.checkIfDeleted(parseInt(id), medication.name);
+            console.log('Check response:', response);
+
+            if (response.wasFound) {
+                setDeletedWarning(response);
+            }
+        } catch (err) {
+            console.error('Failed to check deletion status:', err);
+        }
     };
 
     const handleOtherSelect = () => {
@@ -289,6 +304,21 @@ function AddMedication() {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Intended Duration
+                        </label>
+                        <input
+                            type="text"
+                            name="intendedDuration"
+                            value={formData.intendedDuration}
+                            onChange={handleChange}
+                            disabled={loading}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
+                            placeholder="e.g., 30 days, 2 weeks, Ongoing"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Prescribed? *
                         </label>
                         <div className="flex gap-4">
@@ -353,6 +383,111 @@ function AddMedication() {
                     </div>
                 </form>
             </div>
+
+            {/* Previous Medication Warning Modal */}
+            {deletedWarning && deletedWarning.medication && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+                        <h3 className={`text-xl font-bold mb-4 ${deletedWarning.status === 'deleted' ? 'text-red-600' : 'text-orange-600'
+                            }`}>
+                            {deletedWarning.status === 'deleted' ? '🗑️ Previously Deleted' : '📦 Previously Archived'}
+                        </h3>
+
+                        <div className="space-y-3 mb-6">
+                            <div>
+                                <p className="text-sm text-gray-500">Medication Name</p>
+                                <p className="font-semibold text-gray-800">{deletedWarning.medication.name}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <p className="text-sm text-gray-500">Route</p>
+                                    <p className="font-medium text-gray-800">{deletedWarning.medication.form || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Dose</p>
+                                    <p className="font-medium text-gray-800">{deletedWarning.medication.dose || 'N/A'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <p className="text-sm text-gray-500">Frequency</p>
+                                    <p className="font-medium text-gray-800">{deletedWarning.medication.frequency || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Prescribed</p>
+                                    <p className="font-medium text-gray-800">
+                                        {deletedWarning.medication.prescribed === 'yes' ? 'Yes' : 'No'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {deletedWarning.medication.intended_duration && (
+                                <div>
+                                    <p className="text-sm text-gray-500">Intended Duration</p>
+                                    <p className="font-medium text-gray-800">{deletedWarning.medication.intended_duration}</p>
+                                </div>
+                            )}
+
+                            {deletedWarning.medication.comments && (
+                                <div>
+                                    <p className="text-sm text-gray-500">Comments</p>
+                                    <p className="font-medium text-gray-800">{deletedWarning.medication.comments}</p>
+                                </div>
+                            )}
+
+                            <div className="pt-3 border-t border-gray-200">
+                                <p className="text-sm text-gray-500">
+                                    {deletedWarning.status === 'deleted' ? 'Deleted on' : 'Archived on'}
+                                </p>
+                                <p className="font-medium text-gray-800">
+                                    {new Date(
+                                        deletedWarning.status === 'deleted'
+                                            ? deletedWarning.medication.deleted_at
+                                            : deletedWarning.medication.archived_at
+                                    ).toLocaleDateString('en-US', {
+                                        month: 'long',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    })}
+                                </p>
+                            </div>
+
+                            {deletedWarning.medication.added_at && (
+                                <div>
+                                    <p className="text-sm text-gray-500">Originally Added</p>
+                                    <p className="font-medium text-gray-800">
+                                        {new Date(deletedWarning.medication.added_at).toLocaleDateString('en-US', {
+                                            month: 'long',
+                                            day: 'numeric',
+                                            year: 'numeric'
+                                        })}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                            <p className="text-sm text-yellow-800">
+                                {deletedWarning.status === 'deleted'
+                                    ? 'This medication was previously removed from this patient\'s record.'
+                                    : 'This medication was previously archived for this patient.'}
+                                {' '}You can still add it again if needed.
+                            </p>
+                        </div>
+
+                        <button
+                            onClick={() => setDeletedWarning(null)}
+                            className="w-full bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium"
+                        >
+                            Understood, Continue Adding
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
