@@ -266,7 +266,7 @@ function PatientDetail() {
                         ) : (
                             <p className="text-sm text-gray-600 mb-2">
                                 Started: {formatDate(med.added_at)}
-                                {med.intended_duration && ` • Duration: ${med.intended_duration}`}
+                                {med.intended_duration && ` • Until: ${formatDate(med.intended_duration)}`}
                             </p>
                         )}
 
@@ -642,12 +642,11 @@ function PatientDetail() {
                                     Intended Duration
                                 </label>
                                 <input
-                                    type="text"
+                                    type="date"
                                     name="intendedDuration"
                                     value={editForm.intendedDuration}
                                     onChange={handleEditChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
-                                    placeholder="e.g., 30 days, 2 weeks, Ongoing"
                                 />
                             </div>
 

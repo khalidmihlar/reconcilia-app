@@ -307,13 +307,12 @@ function AddMedication() {
                             Intended Duration
                         </label>
                         <input
-                            type="text"
+                            type="date"
                             name="intendedDuration"
                             value={formData.intendedDuration}
                             onChange={handleChange}
                             disabled={loading}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent disabled:bg-gray-100"
-                            placeholder="e.g., 30 days, 2 weeks, Ongoing"
                         />
                     </div>
 
