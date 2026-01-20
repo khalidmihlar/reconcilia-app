@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Plus, Pill, Calendar, User, Mail, Phone, Archive, Trash2, ArchiveRestore, Save } from 'lucide-react';
+import { ArrowLeft, Plus, Pill, Calendar, User, Mail, Phone, Archive, Trash2, ArchiveRestore, Save, CheckCircle } from 'lucide-react';
 import { patientAPI, medicationAPI } from '../utils/api';
 
 function PatientDetail() {
@@ -16,6 +16,7 @@ function PatientDetail() {
     const [editingMed, setEditingMed] = useState(null);
     const [editForm, setEditForm] = useState({});
     const [saving, setSaving] = useState(false);
+    const [reconciling, setReconciling] = useState(false);
 
     // NEW: Archive modal states
     const [archiveModal, setArchiveModal] = useState(null);
@@ -32,6 +33,9 @@ function PatientDetail() {
     const [medicationChecks, setMedicationChecks] = useState({});
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+    // NEW: Track if patient can be reconciled
+    const [canReconcile, setCanReconcile] = useState(false);
+
     // Reconciliation checklist
     const [checklist, setChecklist] = useState({
         askedOtcs: false,
@@ -44,7 +48,7 @@ function PatientDetail() {
         loadPatient();
     }, [id]);
 
-    const loadPatient = async () => {
+    const loadPatient = async (preserveCanReconcile = null) => {
         try {
             setLoading(true);
             setError('');
@@ -79,6 +83,12 @@ function PatientDetail() {
                 askedMedicationAccess: patientResponse.patient.asked_medication_access === 1,
             });
 
+            // Reset canReconcile since we just loaded fresh data
+            if (preserveCanReconcile === null) {
+                setCanReconcile(false);
+            } else {
+                setCanReconcile(preserveCanReconcile);
+            }
             setHasUnsavedChanges(false);
         } catch (err) {
             console.error('❌ Load patient error:', err);
@@ -94,6 +104,8 @@ function PatientDetail() {
             [medicationId]: !prev[medicationId]
         }));
         setHasUnsavedChanges(true);
+        // Disable reconcile button when changes are made
+        setCanReconcile(false);
     };
 
     const handleChecklistToggle = (field) => {
@@ -102,6 +114,8 @@ function PatientDetail() {
             [field]: !prev[field]
         }));
         setHasUnsavedChanges(true);
+        // Disable reconcile button when changes are made
+        setCanReconcile(false);
     };
 
     const handleSaveDraft = async () => {
@@ -124,14 +138,39 @@ function PatientDetail() {
             // Show success message
             alert(response.message);
 
-            // Reload patient data
-            await loadPatient();
+            // Update canReconcile based on backend response
+            setCanReconcile(response.canReconcile || false);
+
+            // Reload patient data WITHOUT resetting canReconcile
+            await loadPatient(response.canReconcile || false);
 
         } catch (err) {
             console.error('Failed to save draft:', err);
             alert('Failed to save changes: ' + err.message);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleReconcile = async () => {
+        try {
+            setReconciling(true);
+
+            const response = await patientAPI.markReconciled(parseInt(id));
+
+            console.log('Reconcile response:', response);
+
+            // Show success message
+            alert('✅ Patient successfully reconciled!');
+
+            // Navigate back to dashboard
+            navigate('/dashboard');
+
+        } catch (err) {
+            console.error('Failed to reconcile patient:', err);
+            alert('Failed to reconcile patient: ' + err.message);
+        } finally {
+            setReconciling(false);
         }
     };
 
@@ -151,6 +190,7 @@ function PatientDetail() {
             );
             setArchiveModal(null);
             setArchiveForm({ reason: '', comments: '' });
+            setCanReconcile(false); // Disable reconcile when medication is archived
             await loadPatient();
         } catch (err) {
             console.error('Failed to archive medication:', err);
@@ -169,6 +209,7 @@ function PatientDetail() {
     const handleUnarchive = async (medicationId) => {
         try {
             await medicationAPI.updateStatus(medicationId, 'active');
+            setCanReconcile(false); // Disable reconcile when medication is unarchived
             await loadPatient();
         } catch (err) {
             console.error('Failed to unarchive medication:', err);
@@ -180,6 +221,7 @@ function PatientDetail() {
         try {
             await medicationAPI.delete(medicationId);
             setDeleteConfirm(null);
+            setCanReconcile(false); // Disable reconcile when medication is deleted
             await loadPatient();
         } catch (err) {
             console.error('Failed to delete medication:', err);
@@ -212,6 +254,7 @@ function PatientDetail() {
             setSaving(true);
             await medicationAPI.update(editingMed.id, editForm);
             setEditingMed(null);
+            setCanReconcile(false); // Disable reconcile when medication is edited
             await loadPatient();
         } catch (err) {
             console.error('Failed to update medication:', err);
@@ -594,22 +637,37 @@ function PatientDetail() {
                             </div>
                         </div>
 
-                        {/* Save Draft Button */}
-                        <div className="border-t pt-6">
+                        {/* Save Draft and Reconcile Buttons */}
+                        <div className="border-t pt-6 space-y-3">
                             <button
                                 onClick={handleSaveDraft}
-                                disabled={saving || !hasUnsavedChanges}
-                                className={`w-full flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors ${hasUnsavedChanges
-                                    ? 'bg-[#3CA5A0] text-white hover:bg-[#2d7e7a]'
-                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                    }`}
+                                disabled={saving}  // ← ONLY disable when saving
+                                className="w-full flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors bg-[#3CA5A0] text-white hover:bg-[#2d7e7a]"  // ← Always green
                             >
                                 <Save className="w-5 h-5 mr-2" />
                                 {saving ? 'Saving...' : hasUnsavedChanges ? 'Save Draft' : 'No Changes to Save'}
                             </button>
                             {hasUnsavedChanges && (
-                                <p className="text-sm text-orange-600 text-center mt-2">
+                                <p className="text-sm text-orange-600 text-center">
                                     You have unsaved changes
+                                </p>
+                            )}
+
+                            {/* NEW: Reconcile Button */}
+                            <button
+                                onClick={handleReconcile}
+                                disabled={!canReconcile || reconciling}
+                                className={`w-full flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors ${canReconcile && !reconciling
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    }`}
+                            >
+                                <CheckCircle className="w-5 h-5 mr-2" />
+                                {reconciling ? 'Reconciling...' : 'Reconcile Patient'}
+                            </button>
+                            {canReconcile && (
+                                <p className="text-sm text-green-600 text-center font-medium">
+                                    ✓ Ready to reconcile - all items reviewed!
                                 </p>
                             )}
                         </div>

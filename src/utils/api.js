@@ -86,6 +86,14 @@ export const patientAPI = {
             body: JSON.stringify({ medicationStatuses, checklist }),
         });
     },
+
+    // NEW: Mark patient as reconciled
+    markReconciled: async (patientId) => {
+        console.log('Marking patient as reconciled:', patientId);
+        return apiCall(`/patients/${patientId}/reconcile`, {
+            method: 'POST',
+        });
+    },
 };
 
 // ==================== MEDICATION API ====================

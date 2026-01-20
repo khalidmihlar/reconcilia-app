@@ -169,9 +169,7 @@ app.get('/api/patients/:patientId/medications', (req, res) => {
     }
 });
 
-// Replace the save-draft route in server/server.js with this:
-
-// Save draft - batch update medication taking status, checklist, and reconciliation
+// MODIFIED: Save draft - batch update medication taking status and checklist, but DON'T reconcile
 app.post('/api/patients/:patientId/save-draft', (req, res) => {
     try {
         const patientId = parseInt(req.params.patientId);
@@ -194,10 +192,13 @@ app.post('/api/patients/:patientId/save-draft', (req, res) => {
             );
         }
 
+        // ALWAYS set is_reconciled to false when saving draft
+        patientQueries.updateReconciliationStatus(patientId, false);
+
         // Get reconciliation status
         const status = patientQueries.getReconciliationStatus(patientId);
 
-        // Determine if reconciled (all active medications are checked AND all checklist items are checked)
+        // Determine if patient CAN be reconciled (all checkboxes checked)
         const allMedsChecked = status.total_active > 0 &&
             status.total_active === status.checked_active;
 
@@ -205,24 +206,21 @@ app.post('/api/patients/:patientId/save-draft', (req, res) => {
             status.asked_allergies === 1 &&
             status.asked_medication_access === 1;
 
-        const isReconciled = allMedsChecked && allChecklistChecked;
-
-        // Update patient reconciliation status
-        patientQueries.updateReconciliationStatus(patientId, isReconciled);
+        const canReconcile = allMedsChecked && allChecklistChecked;
 
         // Get updated patient info
         const patient = patientQueries.findById(patientId);
 
         res.json({
             patient,
-            isReconciled,
+            canReconcile, // NEW: Tell frontend if reconciliation is possible
             totalActive: status.total_active,
             checkedActive: status.checked_active,
             checklistComplete: allChecklistChecked,
-            message: isReconciled
-                ? 'Patient marked as reconciled'
+            message: canReconcile
+                ? 'Draft saved - ready to reconcile!'
                 : allMedsChecked
-                    ? 'Medications complete - please complete checklist'
+                    ? 'Draft saved - please complete checklist'
                     : 'Draft saved - not all medications reviewed'
         });
     } catch (error) {
@@ -231,7 +229,47 @@ app.post('/api/patients/:patientId/save-draft', (req, res) => {
     }
 });
 
-// Check if medication was previously deleted
+// NEW: Mark patient as reconciled (separate endpoint)
+app.post('/api/patients/:patientId/reconcile', (req, res) => {
+    try {
+        const patientId = parseInt(req.params.patientId);
+
+        // Verify patient can actually be reconciled
+        const status = patientQueries.getReconciliationStatus(patientId);
+
+        const allMedsChecked = status.total_active > 0 &&
+            status.total_active === status.checked_active;
+
+        const allChecklistChecked = status.asked_otcs_topicals_injectables === 1 &&
+            status.asked_allergies === 1 &&
+            status.asked_medication_access === 1;
+
+        const canReconcile = allMedsChecked && allChecklistChecked;
+
+        if (!canReconcile) {
+            return res.status(400).json({
+                error: 'Cannot reconcile - not all items are checked',
+                canReconcile: false
+            });
+        }
+
+        // Mark patient as reconciled
+        patientQueries.updateReconciliationStatus(patientId, true);
+
+        // Get updated patient info
+        const patient = patientQueries.findById(patientId);
+
+        res.json({
+            patient,
+            message: 'Patient successfully reconciled!',
+            isReconciled: true
+        });
+    } catch (error) {
+        console.error('Reconcile patient error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Check if medication was previously deleted or archived
 app.get('/api/patients/:patientId/medications/check-deleted/:medicationName', (req, res) => {
     try {
@@ -382,7 +420,7 @@ app.get('/api/patients/:patientId/medications/archived', (req, res) => {
     }
 });
 
-// Create medication
+// MODIFIED: Create medication - also resets reconciliation status
 app.post('/api/patients/:patientId/medications', (req, res) => {
     try {
         const patientId = parseInt(req.params.patientId);
@@ -396,6 +434,9 @@ app.post('/api/patients/:patientId/medications', (req, res) => {
             patientId, name, strength, form, dose, frequency, prescribed, comments
         );
         const medication = medicationQueries.findById(medicationId);
+
+        // NEW: Reset patient reconciliation status when new medication is added
+        patientQueries.updateReconciliationStatus(patientId, false);
 
         res.status(201).json({ medication });
     } catch (error) {
