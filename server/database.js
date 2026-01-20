@@ -216,7 +216,7 @@ export const medicationQueries = {
   create: (patientId, name, strength, form, dose, frequency, prescribed, comments, intendedDuration) => {
     const stmt = db.prepare(`
       INSERT INTO medications (patient_id, name, strength, form, dose, frequency, prescribed, comments, intended_duration, status, is_taking)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 1)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0)
     `);
     const result = stmt.run(patientId, name, strength, form, dose, frequency, prescribed, comments, intendedDuration);
     return result.lastInsertRowid;
