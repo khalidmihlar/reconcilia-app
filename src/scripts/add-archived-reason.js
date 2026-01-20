@@ -5,13 +5,14 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = path.join(__dirname, '../../database/reconcila.db');
+const dbPath = path.join(__dirname, '../database/reconcila.db');
 
 console.log('🔧 Adding archive reason columns...\n');
 
 const db = new Database(dbPath);
 
 try {
+    // Check existing columns
     const tableInfo = db.prepare("PRAGMA table_info(medications)").all();
     const hasArchiveReason = tableInfo.some(col => col.name === 'archive_reason');
     const hasArchiveComments = tableInfo.some(col => col.name === 'archive_comments');

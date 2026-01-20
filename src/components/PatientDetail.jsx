@@ -17,6 +17,17 @@ function PatientDetail() {
     const [editForm, setEditForm] = useState({});
     const [saving, setSaving] = useState(false);
 
+    // NEW: Archive modal states
+    const [archiveModal, setArchiveModal] = useState(null);
+    const [archiveForm, setArchiveForm] = useState({
+        reason: '',
+        comments: ''
+    });
+
+    // NEW: Edit archived medication states
+    const [editingArchivedMed, setEditingArchivedMed] = useState(null);
+    const [editArchivedForm, setEditArchivedForm] = useState({});
+
     // Track checkbox states locally (not saved until "Save Draft")
     const [medicationChecks, setMedicationChecks] = useState({});
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -124,14 +135,35 @@ function PatientDetail() {
         }
     };
 
-    const handleArchive = async (medicationId) => {
+    const handleArchive = (medicationId) => {
+        // Show modal instead of archiving directly
+        setArchiveModal(medicationId);
+        setArchiveForm({ reason: '', comments: '' });
+    };
+
+    const handleArchiveSubmit = async () => {
         try {
-            await medicationAPI.updateStatus(medicationId, 'archived');
+            await medicationAPI.updateStatus(
+                archiveModal,
+                'archived',
+                archiveForm.reason,
+                archiveForm.comments
+            );
+            setArchiveModal(null);
+            setArchiveForm({ reason: '', comments: '' });
             await loadPatient();
         } catch (err) {
             console.error('Failed to archive medication:', err);
             alert('Failed to archive medication');
         }
+    };
+
+    const handleArchiveFormChange = (e) => {
+        const { name, value } = e.target;
+        setArchiveForm(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
     const handleUnarchive = async (medicationId) => {
@@ -183,6 +215,59 @@ function PatientDetail() {
             await loadPatient();
         } catch (err) {
             console.error('Failed to update medication:', err);
+            alert('Failed to update medication');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleEditArchivedClick = (med) => {
+        setEditingArchivedMed(med);
+        setEditArchivedForm({
+            name: med.name,
+            form: med.form,
+            dose: med.dose,
+            frequency: med.frequency,
+            prescribed: med.prescribed,
+            comments: med.comments || '',
+            intendedDuration: med.intended_duration || '',
+            archiveReason: med.archive_reason || '',
+            archiveComments: med.archive_comments || ''
+        });
+    };
+
+    const handleEditArchivedChange = (e) => {
+        setEditArchivedForm(prev => ({
+            ...prev,
+            [e.target.name]: e.target.value
+        }));
+    };
+
+    const handleEditArchivedSave = async () => {
+        try {
+            setSaving(true);
+
+            // Update medication details
+            await medicationAPI.update(editingArchivedMed.id, {
+                name: editArchivedForm.name,
+                form: editArchivedForm.form,
+                dose: editArchivedForm.dose,
+                frequency: editArchivedForm.frequency,
+                prescribed: editArchivedForm.prescribed,
+                comments: editArchivedForm.comments,
+                intendedDuration: editArchivedForm.intendedDuration
+            });
+
+            // Update archive info separately
+            await medicationAPI.updateArchiveInfo(editingArchivedMed.id, {
+                archiveReason: editArchivedForm.archiveReason,
+                archiveComments: editArchivedForm.archiveComments
+            });
+
+            setEditingArchivedMed(null);
+            await loadPatient();
+        } catch (err) {
+            console.error('Failed to update archived medication:', err);
             alert('Failed to update medication');
         } finally {
             setSaving(false);
@@ -291,13 +376,25 @@ function PatientDetail() {
                                 </p>
                             </div>
                         )}
+                        {isArchived && med.archive_reason && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-sm text-gray-600">
+                                    <span className="font-medium">Archive Reason:</span> {med.archive_reason}
+                                </p>
+                                {med.archive_comments && (
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        <span className="font-medium">Archive Comments:</span> {med.archive_comments}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="ml-4 flex flex-col items-end gap-2">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${med.prescribed === 'yes'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
                         }`}>
                         {med.prescribed === 'yes' ? 'Prescribed' : 'Not Prescribed'}
                     </span>
@@ -308,6 +405,17 @@ function PatientDetail() {
                                 onClick={() => handleEditClick(med)}
                                 className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                                 title="Edit medication"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                            </button>
+                        )}
+                        {isArchived && (
+                            <button
+                                onClick={() => handleEditArchivedClick(med)}
+                                className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Edit archived medication"
                             >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -492,8 +600,8 @@ function PatientDetail() {
                                 onClick={handleSaveDraft}
                                 disabled={saving || !hasUnsavedChanges}
                                 className={`w-full flex items-center justify-center px-6 py-3 rounded-lg font-semibold transition-colors ${hasUnsavedChanges
-                                        ? 'bg-[#3CA5A0] text-white hover:bg-[#2d7e7a]'
-                                        : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    ? 'bg-[#3CA5A0] text-white hover:bg-[#2d7e7a]'
+                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                     }`}
                             >
                                 <Save className="w-5 h-5 mr-2" />
@@ -704,6 +812,345 @@ function PatientDetail() {
                             </button>
                             <button
                                 onClick={() => setEditingMed(null)}
+                                disabled={saving}
+                                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive Confirmation Modal with Form */}
+            {archiveModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                        <h3 className="text-xl font-bold text-gray-800 mb-4">Archive Medication</h3>
+                        <p className="text-gray-600 mb-6">
+                            Please provide a reason for archiving this medication.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-3">
+                                    Reason for Archiving *
+                                </label>
+                                <div className="space-y-2">
+                                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                        <input
+                                            type="radio"
+                                            name="reason"
+                                            value="Allergies"
+                                            checked={archiveForm.reason === 'Allergies'}
+                                            onChange={handleArchiveFormChange}
+                                            className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        />
+                                        <span className="ml-3 text-gray-700">Allergies</span>
+                                    </label>
+
+                                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                        <input
+                                            type="radio"
+                                            name="reason"
+                                            value="Intolerance"
+                                            checked={archiveForm.reason === 'Intolerance'}
+                                            onChange={handleArchiveFormChange}
+                                            className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        />
+                                        <span className="ml-3 text-gray-700">Intolerance</span>
+                                    </label>
+
+                                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                        <input
+                                            type="radio"
+                                            name="reason"
+                                            value="Not working for condition"
+                                            checked={archiveForm.reason === 'Not working for condition'}
+                                            onChange={handleArchiveFormChange}
+                                            className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        />
+                                        <span className="ml-3 text-gray-700">Not working for condition</span>
+                                    </label>
+
+                                    <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                        <input
+                                            type="radio"
+                                            name="reason"
+                                            value="Other"
+                                            checked={archiveForm.reason === 'Other'}
+                                            onChange={handleArchiveFormChange}
+                                            className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                        />
+                                        <span className="ml-3 text-gray-700">Other</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Additional Comments
+                                </label>
+                                <textarea
+                                    name="comments"
+                                    value={archiveForm.comments}
+                                    onChange={handleArchiveFormChange}
+                                    rows="3"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                    placeholder="Any additional notes..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-6">
+                            <button
+                                onClick={handleArchiveSubmit}
+                                disabled={!archiveForm.reason}
+                                className="flex-1 bg-orange-600 text-white py-3 rounded-lg hover:bg-orange-700 font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            >
+                                Archive Medication
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setArchiveModal(null);
+                                    setArchiveForm({ reason: '', comments: '' });
+                                }}
+                                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Archived Medication Modal */}
+            {editingArchivedMed && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-2xl font-bold text-gray-800 mb-6">Edit Archived Medication</h3>
+
+                        <div className="space-y-4">
+                            {/* Medication Details Section */}
+                            <div className="border-b pb-4">
+                                <h4 className="font-semibold text-gray-700 mb-3">Medication Details</h4>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Medication Name *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            value={editArchivedForm.name}
+                                            onChange={handleEditArchivedChange}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Route of Administration *
+                                        </label>
+                                        <select
+                                            name="form"
+                                            value={editArchivedForm.form}
+                                            onChange={handleEditArchivedChange}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                        >
+                                            <option value="">Select route</option>
+                                            <option value="Oral">Oral</option>
+                                            <option value="Sublingual">Sublingual</option>
+                                            <option value="Buccal">Buccal</option>
+                                            <option value="Intravenous">Intravenous (IV)</option>
+                                            <option value="Intramuscular">Intramuscular (IM)</option>
+                                            <option value="Subcutaneous">Subcutaneous (SC)</option>
+                                            <option value="Topical">Topical</option>
+                                            <option value="Transdermal">Transdermal</option>
+                                            <option value="Inhalation">Inhalation</option>
+                                            <option value="Nasal">Nasal</option>
+                                            <option value="Ophthalmic">Ophthalmic</option>
+                                            <option value="Otic">Otic</option>
+                                            <option value="Rectal">Rectal</option>
+                                            <option value="Vaginal">Vaginal</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Prescribed Dose *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="dose"
+                                                value={editArchivedForm.dose}
+                                                onChange={handleEditArchivedChange}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Frequency *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="frequency"
+                                                value={editArchivedForm.frequency}
+                                                onChange={handleEditArchivedChange}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Intended Duration
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="intendedDuration"
+                                            value={editArchivedForm.intendedDuration}
+                                            onChange={handleEditArchivedChange}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Prescribed? *
+                                        </label>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name="prescribed"
+                                                    value="yes"
+                                                    checked={editArchivedForm.prescribed === 'yes'}
+                                                    onChange={handleEditArchivedChange}
+                                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                                />
+                                                <span className="ml-2 text-gray-700">Yes</span>
+                                            </label>
+                                            <label className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name="prescribed"
+                                                    value="no"
+                                                    checked={editArchivedForm.prescribed === 'no'}
+                                                    onChange={handleEditArchivedChange}
+                                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                                />
+                                                <span className="ml-2 text-gray-700">No</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Comments
+                                        </label>
+                                        <textarea
+                                            name="comments"
+                                            value={editArchivedForm.comments}
+                                            onChange={handleEditArchivedChange}
+                                            rows="3"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Archive Information Section */}
+                            <div className="pt-4">
+                                <h4 className="font-semibold text-gray-700 mb-3">Archive Information</h4>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                                            Reason for Archiving *
+                                        </label>
+                                        <div className="space-y-2">
+                                            <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                                <input
+                                                    type="radio"
+                                                    name="archiveReason"
+                                                    value="Allergies"
+                                                    checked={editArchivedForm.archiveReason === 'Allergies'}
+                                                    onChange={handleEditArchivedChange}
+                                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                                />
+                                                <span className="ml-3 text-gray-700">Allergies</span>
+                                            </label>
+
+                                            <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                                <input
+                                                    type="radio"
+                                                    name="archiveReason"
+                                                    value="Intolerance"
+                                                    checked={editArchivedForm.archiveReason === 'Intolerance'}
+                                                    onChange={handleEditArchivedChange}
+                                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                                />
+                                                <span className="ml-3 text-gray-700">Intolerance</span>
+                                            </label>
+
+                                            <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                                <input
+                                                    type="radio"
+                                                    name="archiveReason"
+                                                    value="Not working for condition"
+                                                    checked={editArchivedForm.archiveReason === 'Not working for condition'}
+                                                    onChange={handleEditArchivedChange}
+                                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                                />
+                                                <span className="ml-3 text-gray-700">Not working for condition</span>
+                                            </label>
+
+                                            <label className="flex items-center cursor-pointer hover:bg-gray-50 p-2 rounded">
+                                                <input
+                                                    type="radio"
+                                                    name="archiveReason"
+                                                    value="Other"
+                                                    checked={editArchivedForm.archiveReason === 'Other'}
+                                                    onChange={handleEditArchivedChange}
+                                                    className="w-4 h-4 text-[#3CA5A0] focus:ring-[#3CA5A0]"
+                                                />
+                                                <span className="ml-3 text-gray-700">Other</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Archive Comments
+                                        </label>
+                                        <textarea
+                                            name="archiveComments"
+                                            value={editArchivedForm.archiveComments}
+                                            onChange={handleEditArchivedChange}
+                                            rows="3"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3CA5A0] focus:border-transparent"
+                                            placeholder="Additional notes about why this medication was archived..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-6">
+                            <button
+                                onClick={handleEditArchivedSave}
+                                disabled={saving}
+                                className="flex-1 bg-[#3CA5A0] text-white py-3 rounded-lg hover:bg-[#2d7e7a] font-medium disabled:bg-gray-400"
+                            >
+                                {saving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                            <button
+                                onClick={() => setEditingArchivedMed(null)}
                                 disabled={saving}
                                 className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg hover:bg-gray-300 font-medium"
                             >

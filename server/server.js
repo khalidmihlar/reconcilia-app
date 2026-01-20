@@ -301,13 +301,13 @@ app.put('/api/medications/:id', (req, res) => {
 app.patch('/api/medications/:id/status', (req, res) => {
     try {
         const medicationId = parseInt(req.params.id);
-        const { status } = req.body;
+        const { status, archiveReason, archiveComments } = req.body;
 
         if (!['active', 'archived'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status. Must be active or archived' });
         }
 
-        const changes = medicationQueries.updateStatus(medicationId, status);
+        const changes = medicationQueries.updateStatus(medicationId, status, archiveReason || null, archiveComments || null);
 
         if (changes === 0) {
             return res.status(404).json({ error: 'Medication not found' });
@@ -317,6 +317,25 @@ app.patch('/api/medications/:id/status', (req, res) => {
         res.json({ medication });
     } catch (error) {
         console.error('Update medication status error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.patch('/api/medications/:id/archive-info', (req, res) => {
+    try {
+        const medicationId = parseInt(req.params.id);
+        const { archiveReason, archiveComments } = req.body;
+
+        const changes = medicationQueries.updateArchiveInfo(medicationId, archiveReason || null, archiveComments || null);
+
+        if (changes === 0) {
+            return res.status(404).json({ error: 'Medication not found' });
+        }
+
+        const medication = medicationQueries.findById(medicationId);
+        res.json({ medication });
+    } catch (error) {
+        console.error('Update archive info error:', error);
         res.status(500).json({ error: 'Server error' });
     }
 });

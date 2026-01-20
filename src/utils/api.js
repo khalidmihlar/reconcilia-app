@@ -125,11 +125,10 @@ export const medicationAPI = {
         });
     },
 
-    updateStatus: async (medicationId, status) => {
-        console.log('Updating medication status:', medicationId, status);
+    updateStatus: async (medicationId, status, archiveReason, archiveComments) => {
         return apiCall(`/medications/${medicationId}/status`, {
             method: 'PATCH',
-            body: JSON.stringify({ status }),
+            body: JSON.stringify({ status, archiveReason, archiveComments }),
         });
     },
 
@@ -138,6 +137,13 @@ export const medicationAPI = {
         return apiCall(`/medications/${medicationId}/taking`, {
             method: 'PATCH',
             body: JSON.stringify({ isTaking }),
+        });
+    },
+
+    updateArchiveInfo: async (medicationId, { archiveReason, archiveComments }) => {
+        return apiCall(`/medications/${medicationId}/archive-info`, {
+            method: 'PATCH',
+            body: JSON.stringify({ archiveReason, archiveComments }),
         });
     },
 
