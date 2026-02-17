@@ -15,7 +15,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO_URL="git@github.com:khalidmihlar/reconcilia-app.git"
+REPO_URL="https://github.com/khalidmihlar/reconcilia-app.git"
 APP_DIR="reconcilia-app"
 REQUIRED_NODE_VERSION="18"
 
