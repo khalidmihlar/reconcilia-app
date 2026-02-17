@@ -20,6 +20,12 @@ chmod +x setup-reconcilia-mac.sh
 ./setup-reconcilia-mac.sh
 ```
 
+**OR** use the one-line installer:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/khalidmihlar/reconcilia-app/main/setup-reconcilia-mac.sh)"
+```
+
 **That's it!** The script will automatically:
 - ✅ Install everything you need
 - ✅ Download the app
