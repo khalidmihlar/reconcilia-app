@@ -68,7 +68,7 @@ REM ============================================================================
 
 call :print_header "Checking Administrator Privileges"
 
-net session >nul 2>&1
+net session
 if %errorLevel% == 0 (
     call :print_success "Running with administrator privileges"
     echo.
@@ -88,7 +88,7 @@ REM ============================================================================
 
 call :print_header "Checking Chocolatey Installation"
 
-where choco >nul 2>&1
+where choco 
 if %errorLevel% == 0 (
     call :print_success "Chocolatey is already installed"
     echo.
@@ -133,7 +133,7 @@ REM ============================================================================
 
 call :print_header "Checking Git Installation"
 
-where git >nul 2>&1
+where git 
 if %errorLevel! == 0 (
     call :print_success "Git is already installed"
     echo.
@@ -176,7 +176,7 @@ REM ============================================================================
 
 call :print_header "Checking Node.js Installation"
 
-where node >nul 2>&1
+where node 
 if !errorLevel! == 0 (
     call :print_info "Node.js is installed"
     echo.
@@ -237,7 +237,7 @@ if !errorLevel! == 0 (
 )
 
 REM Verify npm
-where npm >nul 2>&1
+where npm 
 if !errorLevel! == 0 (
     call :print_success "npm is available"
     echo.
@@ -491,7 +491,7 @@ if /i "!CREATE_SHORTCUT!"=="y" (
         echo oLink.Save
     ) > create_shortcut.vbs
     
-    cscript //nologo create_shortcut.vbs >nul 2>&1
+    cscript //nologo create_shortcut.vbs 
     del create_shortcut.vbs
     
     echo.
@@ -631,7 +631,7 @@ REM ============================================================================
 
 call :print_header "Checking Administrator Privileges"
 
-net session >nul 2>&1
+net session 
 if %errorLevel% == 0 (
     call :print_success "Running with administrator privileges"
 ) else (
@@ -649,7 +649,7 @@ REM ============================================================================
 
 call :print_header "Checking Chocolatey Installation"
 
-where choco >nul 2>&1
+where choco 
 if %errorLevel% == 0 (
     call :print_success "Chocolatey is already installed"
     echo.
@@ -687,7 +687,7 @@ REM ============================================================================
 
 call :print_header "Checking Git Installation"
 
-where git >nul 2>&1
+where git 
 if %errorLevel% == 0 (
     call :print_success "Git is already installed"
     echo.
@@ -722,7 +722,7 @@ REM ============================================================================
 
 call :print_header "Checking Node.js Installation"
 
-where node >nul 2>&1
+where node 
 if %errorLevel% == 0 (
     call :print_info "Node.js is installed"
     echo.
@@ -774,7 +774,7 @@ if %errorLevel% == 0 (
 )
 
 REM Verify npm
-where npm >nul 2>&1
+where npm 
 if %errorLevel% == 0 (
     call :print_success "npm is available"
     echo.
