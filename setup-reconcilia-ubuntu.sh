@@ -97,6 +97,34 @@ install_git() {
 }
 
 ################################################################################
+# Install Build Tools
+################################################################################
+
+install_build_tools() {
+    print_header "Installing Build Tools"
+    
+    print_info "Some npm packages require compilation tools..."
+    
+    # Check if build-essential is installed
+    if dpkg -l | grep -q build-essential; then
+        print_success "Build tools already installed"
+    else
+        print_info "Installing build-essential (required for native modules)..."
+        sudo apt-get install -y build-essential
+        print_success "Build tools installed"
+    fi
+    
+    # Install python3 if needed (required by node-gyp)
+    if command_exists python3; then
+        print_success "Python3 is available"
+    else
+        print_info "Installing python3 (required by node-gyp)..."
+        sudo apt-get install -y python3
+        print_success "Python3 installed"
+    fi
+}
+
+################################################################################
 # Install Node.js
 ################################################################################
 
@@ -197,15 +225,47 @@ install_dependencies() {
             print_info "Removing existing node_modules..."
             rm -rf node_modules package-lock.json
             print_info "Installing dependencies (this may take a few minutes)..."
-            npm install
-            print_success "Dependencies installed successfully"
+            echo ""
+            print_info "Note: Some warnings about engines are normal and can be ignored"
+            echo ""
+            
+            # Use flags to handle engine and peer dependency issues
+            npm install --legacy-peer-deps --ignore-scripts || {
+                print_warning "Installation with --ignore-scripts failed, trying with scripts..."
+                npm install --legacy-peer-deps
+            }
+            
+            if [ $? -eq 0 ]; then
+                print_success "Dependencies installed successfully"
+            else
+                print_error "Failed to install dependencies"
+                print_info "Try manually with: npm install --legacy-peer-deps --force"
+                cd ..
+                exit 1
+            fi
         else
             print_info "Skipping dependency installation"
         fi
     else
         print_info "Installing dependencies (this may take a few minutes)..."
-        npm install
-        print_success "Dependencies installed successfully"
+        echo ""
+        print_info "Note: Some warnings about engines are normal and can be ignored"
+        echo ""
+        
+        # Use flags to handle engine and peer dependency issues
+        npm install --legacy-peer-deps --ignore-scripts || {
+            print_warning "Installation with --ignore-scripts failed, trying with scripts..."
+            npm install --legacy-peer-deps
+        }
+        
+        if [ $? -eq 0 ]; then
+            print_success "Dependencies installed successfully"
+        else
+            print_error "Failed to install dependencies"
+            print_info "Try manually with: npm install --legacy-peer-deps --force"
+            cd ..
+            exit 1
+        fi
     fi
     
     cd ..
@@ -366,17 +426,19 @@ main() {
     echo "This script will:"
     echo "  1. Update package lists"
     echo "  2. Install Git (if needed)"
-    echo "  3. Install Node.js v${REQUIRED_NODE_VERSION}+ (if needed)"
-    echo "  4. Clone the Reconcilia repository"
-    echo "  5. Install application dependencies"
-    echo "  6. Set up the database"
-    echo "  7. Create launch scripts"
+    echo "  3. Install build tools (gcc, g++, make, python3)"
+    echo "  4. Install Node.js v${REQUIRED_NODE_VERSION}+ (if needed)"
+    echo "  5. Clone the Reconcilia repository"
+    echo "  6. Install application dependencies"
+    echo "  7. Set up the database"
+    echo "  8. Create launch scripts"
     echo ""
     read -p "Press Enter to continue or Ctrl+C to cancel..."
     
     # Install system dependencies
     update_package_lists
     install_git
+    install_build_tools
     install_node
     
     # Setup application
