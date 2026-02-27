@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 # Configuration
 REPO_URL="https://github.com/khalidmihlar/reconcilia-app.git"
 APP_DIR="reconcilia-app"
-REQUIRED_NODE_VERSION="18"
+REQUIRED_NODE_VERSION="20"
 
 ################################################################################
 # Helper Functions
@@ -224,51 +224,61 @@ install_dependencies() {
         if [[ $REPLY =~ ^[Yy]$ ]]; then
             print_info "Removing existing node_modules..."
             rm -rf node_modules package-lock.json
-            print_info "Installing dependencies (this may take a few minutes)..."
-            echo ""
-            print_info "Note: Some warnings about engines are normal and can be ignored"
-            echo ""
-            
-            # Use flags to handle engine and peer dependency issues
-            npm install --legacy-peer-deps --ignore-scripts || {
-                print_warning "Installation with --ignore-scripts failed, trying with scripts..."
-                npm install --legacy-peer-deps
-            }
-            
-            if [ $? -eq 0 ]; then
-                print_success "Dependencies installed successfully"
-            else
-                print_error "Failed to install dependencies"
-                print_info "Try manually with: npm install --legacy-peer-deps --force"
-                cd ..
-                exit 1
-            fi
+            install_npm_packages
         else
             print_info "Skipping dependency installation"
         fi
     else
-        print_info "Installing dependencies (this may take a few minutes)..."
-        echo ""
-        print_info "Note: Some warnings about engines are normal and can be ignored"
-        echo ""
-        
-        # Use flags to handle engine and peer dependency issues
-        npm install --legacy-peer-deps --ignore-scripts || {
-            print_warning "Installation with --ignore-scripts failed, trying with scripts..."
-            npm install --legacy-peer-deps
-        }
-        
-        if [ $? -eq 0 ]; then
-            print_success "Dependencies installed successfully"
-        else
-            print_error "Failed to install dependencies"
-            print_info "Try manually with: npm install --legacy-peer-deps --force"
-            cd ..
-            exit 1
-        fi
+        install_npm_packages
     fi
     
     cd ..
+}
+
+install_npm_packages() {
+    print_info "Installing dependencies (this may take a few minutes)..."
+    echo ""
+    print_info "Note: Some warnings are normal and can be ignored"
+    echo ""
+    
+    # Clean npm cache first
+    npm cache clean --force
+    
+    # Install dependencies with proper flags
+    if npm install --legacy-peer-deps; then
+        print_success "Dependencies installed successfully"
+        echo ""
+        
+        # Rebuild native modules (better-sqlite3, rolldown)
+        print_info "Rebuilding native modules for your system..."
+        
+        if npm rebuild better-sqlite3 --build-from-source; then
+            print_success "better-sqlite3 rebuilt successfully"
+        else
+            print_warning "better-sqlite3 rebuild had issues, trying alternative..."
+            npm install better-sqlite3 --build-from-source --legacy-peer-deps
+        fi
+        
+        # Give rolldown a chance to rebuild if needed
+        npm rebuild 2>/dev/null || true
+        
+        print_success "Native modules ready"
+    else
+        print_error "Failed to install dependencies"
+        print_info "Trying alternative installation method..."
+        
+        # Try with ignore-scripts first, then rebuild
+        if npm install --legacy-peer-deps --ignore-scripts; then
+            print_info "Packages installed, now building native modules..."
+            npm rebuild better-sqlite3 --build-from-source
+            npm rebuild
+            print_success "Installation complete with rebuild"
+        else
+            print_error "Installation failed"
+            print_info "Try manually with: npm install --legacy-peer-deps --force"
+            exit 1
+        fi
+    fi
 }
 
 ################################################################################
@@ -430,8 +440,9 @@ main() {
     echo "  4. Install Node.js v${REQUIRED_NODE_VERSION}+ (if needed)"
     echo "  5. Clone the Reconcilia repository"
     echo "  6. Install application dependencies"
-    echo "  7. Set up the database"
-    echo "  8. Create launch scripts"
+    echo "  7. Rebuild native modules (better-sqlite3, rolldown)"
+    echo "  8. Set up the database"
+    echo "  9. Create launch scripts"
     echo ""
     read -p "Press Enter to continue or Ctrl+C to cancel..."
     
