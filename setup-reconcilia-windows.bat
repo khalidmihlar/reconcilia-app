@@ -1086,5 +1086,4 @@ if /i "!START_NOW!"=="y" (
     echo.
     pause
 )
-
 exit /b 0
