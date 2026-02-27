@@ -1,4 +1,4 @@
-@echo off
+@echo on
 REM ============================================================================
 REM Reconcilia App - Automated Setup Script for Windows
 REM This script will install all dependencies and launch the application
